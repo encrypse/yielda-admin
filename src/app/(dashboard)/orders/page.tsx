@@ -5,6 +5,7 @@ import { adminOrders, adminReports } from '@/lib/api';
 import { formatDate, formatMoney, downloadBlob } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ExportModal } from '@/components/ExportModal';
 import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 
 type Order = {
@@ -34,6 +35,7 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [status, setStatus] = useState('');
   const [side, setSide] = useState('');
+  const [exportOpen, setExportOpen] = useState(false);
 
   useEffect(() => {
     setPage(1);
@@ -52,13 +54,20 @@ export default function OrdersPage() {
 
   const totalPages = Math.ceil(total / 20);
 
-  async function download(format: 'csv' | 'pdf') {
-    const res = await adminReports.trades({ format });
-    downloadBlob(res.data, `trades.${format}`);
+  async function handleExportTrades(from: string, to: string, format: 'csv' | 'pdf') {
+    const res = await adminReports.trades({ from, to, format });
+    downloadBlob(res.data, `trades-${from}-${to}.${format}`);
   }
 
   return (
     <div className="space-y-4">
+      {exportOpen && (
+        <ExportModal
+          title="Export Trades Report"
+          onExport={handleExportTrades}
+          onClose={() => setExportOpen(false)}
+        />
+      )}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-xl font-semibold text-[#0E121B]">Orders</h2>
@@ -84,8 +93,7 @@ export default function OrdersPage() {
               <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
             ))}
           </select>
-          <Button size="sm" variant="outline" onClick={() => download('csv')}><Download size={14} className="mr-1" />CSV</Button>
-          <Button size="sm" variant="outline" onClick={() => download('pdf')}><Download size={14} className="mr-1" />PDF</Button>
+          <Button size="sm" variant="outline" onClick={() => setExportOpen(true)} className="gap-1.5"><Download size={14} />Export Trades</Button>
         </div>
       </div>
 

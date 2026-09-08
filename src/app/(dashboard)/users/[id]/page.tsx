@@ -5,6 +5,7 @@ import { adminUsers, adminOrders, adminReports, adminUsersExtra } from '@/lib/ap
 import { formatDate, formatMoney, downloadBlob } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { ExportModal } from '@/components/ExportModal';
 import { ChevronLeft, Download, Pencil, Trash2, User, ShieldCheck, ClipboardList, TrendingUp, X, ZoomIn } from 'lucide-react';
 
 type KycProfile = {
@@ -235,6 +236,7 @@ export default function UserDetailPage() {
   const [ordersLoaded, setOrdersLoaded] = useState(false);
 
   const [imageModal, setImageModal] = useState<{ src: string; label: string } | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const [confirmModal, setConfirmModal] = useState<{ targetStatus: 'ACTIVE' | 'SUSPENDED' } | null>(null);
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -306,9 +308,9 @@ export default function UserDetailPage() {
     }
   }
 
-  async function downloadStatement(format: 'csv' | 'pdf') {
-    const res = await adminReports.userStatement(id, { format });
-    downloadBlob(res.data, `statement-${id}.${format}`);
+  async function handleExportStatement(from: string, to: string, format: 'csv' | 'pdf') {
+    const res = await adminReports.userStatement(id, { from, to, format });
+    downloadBlob(res.data, `statement-${user?.lastName ?? id}-${from}-${to}.${format}`);
   }
 
   if (loading) {
@@ -338,6 +340,13 @@ export default function UserDetailPage() {
     <div className="space-y-4">
       {imageModal && (
         <ImageModal src={imageModal.src} label={imageModal.label} onClose={() => setImageModal(null)} />
+      )}
+      {exportOpen && (
+        <ExportModal
+          title="Export Statement"
+          onExport={handleExportStatement}
+          onClose={() => setExportOpen(false)}
+        />
       )}
 
       {/* Back */}
@@ -397,11 +406,8 @@ export default function UserDetailPage() {
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 mt-4 pt-4 border-t border-[#E1E4EA] flex-wrap">
-          <Button size="sm" variant="outline" onClick={() => downloadStatement('csv')} className="h-8 text-xs gap-1.5">
-            <Download size={13} /> CSV
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => downloadStatement('pdf')} className="h-8 text-xs gap-1.5">
-            <Download size={13} /> PDF
+          <Button size="sm" variant="outline" onClick={() => setExportOpen(true)} className="h-8 text-xs gap-1.5">
+            <Download size={13} /> Export Statement
           </Button>
           <Button size="sm" variant="outline" onClick={startEdit} className="h-8 text-xs gap-1.5">
             <Pencil size={13} /> Edit
