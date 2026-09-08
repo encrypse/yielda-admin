@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminAuth } from '@/lib/api';
 import { isAuthenticated } from '@/lib/auth';
 
@@ -30,14 +30,22 @@ export function useAuth() {
     fetchMe().finally(() => setLoading(false));
   }, []);
 
-  const permissions = new Set(admin?.permissions.map((p) => p.permission) ?? []);
+  const permissions = useMemo(
+    () => new Set(admin?.permissions.map((p) => p.permission) ?? []),
+    [admin],
+  );
+
+  const hasPermission = useCallback(
+    (key: string) => !!(admin?.isSuperAdmin || permissions.has(key)),
+    [admin, permissions],
+  );
 
   return {
     admin,
     loading,
     isSuperAdmin: admin?.isSuperAdmin ?? false,
     permissions,
-    hasPermission: (key: string) => admin?.isSuperAdmin || permissions.has(key),
+    hasPermission,
     refreshAdmin: fetchMe,
   };
 }
