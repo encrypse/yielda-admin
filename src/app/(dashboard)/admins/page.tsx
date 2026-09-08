@@ -29,6 +29,7 @@ export default function AdminsPage() {
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState('');
   const [inviteLink, setInviteLink] = useState('');
+  const [invitedEmail, setInvitedEmail] = useState('');
   const [copied, setCopied] = useState(false);
 
   function load() {
@@ -51,6 +52,7 @@ export default function AdminsPage() {
     try {
       const data = await adminAdmins.invite(inviteEmail, selectedPerms);
       const link = `${window.location.origin}/accept-invite?token=${data.inviteToken}`;
+      setInvitedEmail(inviteEmail);
       setInviteLink(link);
       setInviteEmail('');
       setSelectedPerms([]);
@@ -72,6 +74,7 @@ export default function AdminsPage() {
   function closeDialog() {
     setInviteOpen(false);
     setInviteLink('');
+    setInvitedEmail('');
     setInviteError('');
   }
 
@@ -156,7 +159,7 @@ export default function AdminsPage() {
 
           {inviteLink ? (
             <div className="space-y-4">
-              <p className="text-sm text-[#717784]">Share this link with <strong>{admins.at(-1)?.email}</strong>. It expires in 48 hours.</p>
+              <p className="text-sm text-[#717784]">Share this link with <strong>{invitedEmail}</strong>. It expires in 48 hours.</p>
               <div className="flex items-center gap-2 bg-[#EDF0F7] rounded-lg px-3 py-2">
                 <p className="text-xs font-mono text-[#0E121B] flex-1 break-all">{inviteLink}</p>
                 <button onClick={copyLink} className="text-[#717784] hover:text-[#0E121B] flex-shrink-0">

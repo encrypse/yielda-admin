@@ -5,13 +5,12 @@ import { adminUsers, adminReports, adminUsersExtra } from '@/lib/api';
 import { formatDate, formatMoney, downloadBlob } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, Download, Wallet, Pencil, Trash2 } from 'lucide-react';
+import { ChevronLeft, Download, Pencil, Trash2 } from 'lucide-react';
 
 type UserDetail = {
   id: string; firstName: string; lastName: string; email: string;
   phoneNumber: string; accountStatus: string; tier: string; createdAt: string;
-  kycProfile?: { verificationStatus: string };
-  walletBalance?: number;
+  kycStatus?: string;
   recentTransactions?: Array<{
     id: string; transactionType: string; amount: string; reason: string; createdAt: string;
   }>;
@@ -26,8 +25,9 @@ const STATUS_COLOR: Record<string, string> = {
 
 const KYC_COLOR: Record<string, string> = {
   APPROVED: 'bg-[#F6FFF9] text-[#12B76A] border-[#12B76A]/20',
-  PENDING: 'bg-[#FFF6BD] text-[#D99800] border-[#D99800]/20',
-  REJECTED: 'bg-[#FFF6F6] text-[#FF3B30] border-[#FF3B30]/20',
+  IN_REVIEW: 'bg-[#FFF6BD] text-[#D99800] border-[#D99800]/20',
+  FAILED: 'bg-[#FFF6F6] text-[#FF3B30] border-[#FF3B30]/20',
+  NOT_SUBMITTED: 'bg-[#EDF0F7] text-[#717784] border-[#E1E4EA]',
 };
 
 function Field({ label, value }: { label: string; value: React.ReactNode }) {
@@ -115,7 +115,7 @@ export default function UserDetailPage() {
 
   if (!user) return <p className="text-[#FF3B30] text-sm">User not found.</p>;
 
-  const kycStatus = user.kycProfile?.verificationStatus ?? 'NOT_SUBMITTED';
+  const kycStatus = user.kycStatus ?? 'NOT_SUBMITTED';
 
   return (
     <div className="space-y-4">
@@ -140,8 +140,8 @@ export default function UserDetailPage() {
           </Button>
           {user.accountStatus === 'ACTIVE' ? (
             <Button size="sm" onClick={() => toggleStatus('SUSPENDED')} disabled={updating}
-              className="h-8 text-xs bg-[#FF3B30] text-white hover:bg-red-600">
-              Block
+              className="h-8 text-xs bg-[#D99800] text-white hover:bg-yellow-600">
+              Suspend
             </Button>
           ) : (
             <Button size="sm" onClick={() => toggleStatus('ACTIVE')} disabled={updating}
@@ -172,32 +172,27 @@ export default function UserDetailPage() {
         </div>
       </div>
 
-      {/* Details + Wallet */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="md:col-span-2 bg-white rounded-xl border border-[#E1E4EA] overflow-hidden">
-          <p className="px-5 py-3.5 text-xs font-semibold text-[#717784] uppercase tracking-wide border-b border-[#E1E4EA]">Account Details</p>
-          <div className="px-5">
+      {/* Account Details */}
+      <div className="bg-white rounded-xl border border-[#E1E4EA] overflow-hidden">
+        <p className="px-5 py-3.5 text-xs font-semibold text-[#717784] uppercase tracking-wide border-b border-[#E1E4EA]">Account Details</p>
+        <div className="px-5 grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-[#E1E4EA]">
+          <div>
             <Field label="Member since" value={formatDate(user.createdAt)} />
-            <Field
-              label="KYC Status"
-              value={
-                <Badge className={`text-xs border ${KYC_COLOR[kycStatus] ?? 'bg-[#EDF0F7] text-[#717784] border-[#E1E4EA]'}`}>
-                  {kycStatus.replace(/_/g, ' ')}
-                </Badge>
-              }
-            />
-            <Field label="User ID" value={<span className="font-mono text-xs text-[#717784]">{user.id}</span>} />
+            <Field label="Account Status" value={
+              <Badge className={`text-xs border ${STATUS_COLOR[user.accountStatus] ?? ''}`}>{user.accountStatus}</Badge>
+            } />
+            <Field label="Tier" value={
+              <span className="text-xs bg-[#EDF0F7] text-[#717784] px-2 py-0.5 rounded-full">{user.tier}</span>
+            } />
           </div>
-        </div>
-
-        <div className="bg-white rounded-xl border border-[#E1E4EA] overflow-hidden">
-          <p className="px-5 py-3.5 text-xs font-semibold text-[#717784] uppercase tracking-wide border-b border-[#E1E4EA]">Wallet</p>
-          <div className="p-5 flex flex-col items-center justify-center gap-2 h-[calc(100%-48px)]">
-            <div className="w-10 h-10 rounded-xl bg-[#EDF0F7] flex items-center justify-center">
-              <Wallet size={18} className="text-[#717784]" />
-            </div>
-            <p className="text-2xl font-bold text-[#0E121B]">{formatMoney(user.walletBalance ?? 0)}</p>
-            <p className="text-xs text-[#717784]">Available balance</p>
+          <div className="md:pl-5">
+            <Field label="KYC Status" value={
+              <Badge className={`text-xs border ${KYC_COLOR[kycStatus] ?? 'bg-[#EDF0F7] text-[#717784] border-[#E1E4EA]'}`}>
+                {kycStatus.replace(/_/g, ' ')}
+              </Badge>
+            } />
+            <Field label="Phone" value={user.phoneNumber ?? '—'} />
+            <Field label="User ID" value={<span className="font-mono text-xs text-[#717784]">{user.id}</span>} />
           </div>
         </div>
       </div>

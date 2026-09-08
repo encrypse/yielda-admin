@@ -4,12 +4,20 @@ import { useParams, useRouter } from 'next/navigation';
 import { adminSettlements } from '@/lib/api';
 import { formatDate, formatMoney } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, User, ArrowLeftRight } from 'lucide-react';
+import { ChevronLeft, User, ArrowLeftRight, TrendingUp, TrendingDown, Wallet, Banknote } from 'lucide-react';
+
+type WalletTx = { id: string; amount: string; reference: string; transactionType: string; createdAt: string };
+type OmsOrder = { id: string; side: string; symbol: string; quantity: number; price: string; totalEstimatedValue: string; status: string };
+type SettlementWalletDebit = { id: string; amount: string; reference: string; createdAt: string } | null;
 
 type SettlementDetail = {
   id: string; status: string; queueStatus: string; amountDue: string;
+  settlementAmount?: string; estimatedPendingSettlementAmount?: string;
   createdAt: string; updatedAt: string;
   user: { id: string; firstName: string; lastName: string; email: string };
+  omsOrder: OmsOrder | null;
+  settlementWalletDebit: SettlementWalletDebit;
+  userWalletCredit: WalletTx | null;
 };
 
 const STATUS_COLOR: Record<string, string> = {
@@ -52,11 +60,15 @@ export default function SettlementDetailPage() {
         <div className="h-10 bg-[#EDF0F7] rounded-lg animate-pulse w-48" />
         <div className="h-56 bg-white rounded-xl animate-pulse border border-[#E1E4EA]" />
         <div className="h-40 bg-white rounded-xl animate-pulse border border-[#E1E4EA]" />
+        <div className="h-32 bg-white rounded-xl animate-pulse border border-[#E1E4EA]" />
       </div>
     );
   }
 
   if (!settlement) return <p className="text-[#FF3B30] text-sm">Settlement not found.</p>;
+
+  const order = settlement.omsOrder;
+  const isBuy = order?.side === 'BUY';
 
   return (
     <div className="space-y-4">
@@ -76,7 +88,7 @@ export default function SettlementDetailPage() {
           <p className="text-xs text-[#717784]">Created {formatDate(settlement.createdAt)}</p>
         </div>
         <Badge className={`text-xs border px-3 py-1 ${STATUS_COLOR[settlement.status] ?? 'bg-[#EDF0F7] text-[#717784] border-[#E1E4EA]'}`}>
-          {settlement.status.replace('_', ' ')}
+          {settlement.status.replace(/_/g, ' ')}
         </Badge>
       </div>
 
@@ -97,10 +109,91 @@ export default function SettlementDetailPage() {
           </Badge>
         </div>
         <div className="px-5">
+          {settlement.settlementAmount && (
+            <Field label="Settlement amount" value={formatMoney(settlement.settlementAmount)} />
+          )}
+          {settlement.estimatedPendingSettlementAmount && !settlement.settlementAmount && (
+            <Field label="Estimated amount" value={formatMoney(settlement.estimatedPendingSettlementAmount)} />
+          )}
           <Field label="Queue status" value={settlement.queueStatus} />
           <Field label="Last updated" value={formatDate(settlement.updatedAt)} />
         </div>
       </div>
+
+      {/* Linked Order */}
+      {order && (
+        <div className="bg-white rounded-xl border border-[#E1E4EA] overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-[#E1E4EA] flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isBuy ? 'bg-[#F6FFF9]' : 'bg-[#FFF6F6]'}`}>
+                {isBuy
+                  ? <TrendingUp size={14} className="text-[#12B76A]" />
+                  : <TrendingDown size={14} className="text-[#FF3B30]" />}
+              </div>
+              <p className="text-xs font-semibold text-[#717784] uppercase tracking-wide">Linked Order</p>
+            </div>
+            <button
+              onClick={() => router.push(`/orders/${order.id}`)}
+              className="text-xs text-[#3571F1] hover:underline font-medium"
+            >
+              View order →
+            </button>
+          </div>
+          <div className="px-5">
+            <Field label="Symbol" value={<span className="font-mono">{order.symbol}</span>} />
+            <Field label="Side" value={
+              <Badge className={`text-xs border ${isBuy ? 'bg-[#F6FFF9] text-[#12B76A] border-[#12B76A]/20' : 'bg-[#FFF6F6] text-[#FF3B30] border-[#FF3B30]/20'}`}>
+                {order.side}
+              </Badge>
+            } />
+            <Field label="Quantity" value={order.quantity.toLocaleString()} />
+            <Field label="Price per unit" value={formatMoney(order.price)} />
+            <Field label="Total value" value={formatMoney(order.totalEstimatedValue)} />
+            <Field label="Order status" value={
+              <span className="text-xs text-[#717784]">{order.status}</span>
+            } />
+          </div>
+        </div>
+      )}
+
+      {/* Org Wallet Debit (what was paid out) */}
+      {settlement.settlementWalletDebit && (
+        <div className="bg-white rounded-xl border border-[#E1E4EA] overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-[#E1E4EA] flex items-center gap-2">
+            <Banknote size={15} className="text-[#717784]" />
+            <p className="text-xs font-semibold text-[#717784] uppercase tracking-wide">Org Wallet Debit</p>
+          </div>
+          <div className="px-5">
+            <Field label="Amount paid" value={
+              <span className="font-medium text-[#FF3B30]">{formatMoney(settlement.settlementWalletDebit.amount)}</span>
+            } />
+            <Field label="Reference" value={
+              <span className="font-mono text-xs text-[#717784]">{settlement.settlementWalletDebit.reference}</span>
+            } />
+            <Field label="Date" value={formatDate(settlement.settlementWalletDebit.createdAt)} />
+          </div>
+        </div>
+      )}
+
+      {/* User Wallet Credit (user received funds) */}
+      {settlement.userWalletCredit && (
+        <div className="bg-white rounded-xl border border-[#E1E4EA] overflow-hidden">
+          <div className="px-5 py-3.5 border-b border-[#E1E4EA] flex items-center gap-2">
+            <Wallet size={15} className="text-[#717784]" />
+            <p className="text-xs font-semibold text-[#717784] uppercase tracking-wide">User Wallet Credit</p>
+          </div>
+          <div className="px-5">
+            <Field label="Amount credited" value={
+              <span className="font-medium text-[#12B76A]">{formatMoney(settlement.userWalletCredit.amount)}</span>
+            } />
+            <Field label="Type" value={settlement.userWalletCredit.transactionType} />
+            <Field label="Reference" value={
+              <span className="font-mono text-xs text-[#717784]">{settlement.userWalletCredit.reference}</span>
+            } />
+            <Field label="Date" value={formatDate(settlement.userWalletCredit.createdAt)} />
+          </div>
+        </div>
+      )}
 
       {/* Customer */}
       <div className="bg-white rounded-xl border border-[#E1E4EA] overflow-hidden">

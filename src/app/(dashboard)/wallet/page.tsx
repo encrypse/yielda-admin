@@ -13,7 +13,7 @@ type WalletData = {
     balance: string; totalCredit: string; totalDebit: string; status: string;
   };
   ledger: {
-    data: Array<{ id: string; entryType: string; source: string; amount: string; reference: string; reason: string; createdAt: string }>;
+    data: Array<{ id: string; entryType: string; source: string; amount: string; reference: string; providerReference: string | null; providerStatus: string | null; reason: string; createdAt: string }>;
     total: number; page: number; totalPages: number;
   };
 };
@@ -67,7 +67,7 @@ export default function WalletPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-[#E1E4EA] bg-[#F5F7FA]">
-                {['Type', 'Source', 'Amount', 'Reference', 'Reason', 'Date'].map((h) => (
+                {['Type', 'Source', 'Amount', 'Reference', 'Provider Status', 'Reason', 'Date'].map((h) => (
                   <th key={h} className="text-left px-4 py-2.5 text-xs font-semibold text-[#717784] uppercase">{h}</th>
                 ))}
               </tr>
@@ -80,8 +80,9 @@ export default function WalletPage() {
                   </td>
                   <td className="px-4 py-2.5 text-[#717784]">{e.source}</td>
                   <td className="px-4 py-2.5 font-medium text-[#0E121B]">{formatMoney(e.amount)}</td>
-                  <td className="px-4 py-2.5 text-xs font-mono text-[#717784]">{e.reference.slice(0, 20)}…</td>
-                  <td className="px-4 py-2.5 text-[#717784] max-w-[160px] truncate">{e.reason ?? '—'}</td>
+                  <td className="px-4 py-2.5 text-xs font-mono text-[#717784]">{e.reference.slice(0, 18)}…</td>
+                  <td className="px-4 py-2.5 text-xs text-[#717784]">{e.providerStatus ?? '—'}</td>
+                  <td className="px-4 py-2.5 text-[#717784] max-w-[140px] truncate">{e.reason ?? '—'}</td>
                   <td className="px-4 py-2.5 text-[#717784]">{formatDate(e.createdAt, 'dd MMM yyyy')}</td>
                 </tr>
               ))}

@@ -19,35 +19,68 @@ type AuditLog = {
 const ACTION_COLOR: Record<string, string> = {
   ADMIN_USER_DELETED: 'text-[#FF3B30]',
   ADMIN_USER_BLOCKED: 'text-[#FF3B30]',
+  ADMIN_DEACTIVATED: 'text-[#FF3B30]',
   ADMIN_USER_SUSPENDED: 'text-[#D99800]',
   ADMIN_CACHE_CLEARED: 'text-[#D99800]',
   ADMIN_JOB_TRIGGERED: 'text-[#3571F1]',
-  ADMIN_USER_ACTIVATED: 'text-[#12B76A]',
   ADMIN_SETTINGS_UPDATED: 'text-[#3571F1]',
+  ADMIN_INVITED: 'text-[#3571F1]',
+  ADMIN_PERMISSIONS_UPDATED: 'text-[#3571F1]',
+  ADMIN_REPORT_EXPORTED: 'text-[#3571F1]',
+  ADMIN_USER_ACTIVATED: 'text-[#12B76A]',
   ADMIN_USER_EDITED: 'text-[#717784]',
   ADMIN_PROFILE_UPDATED: 'text-[#717784]',
+  ADMIN_LOGIN: 'text-[#717784]',
+  ADMIN_LOGOUT: 'text-[#717784]',
+  ADMIN_2FA_SETUP: 'text-[#717784]',
 };
+
+const ALL_ACTIONS = [
+  'ADMIN_LOGIN', 'ADMIN_LOGOUT', 'ADMIN_PROFILE_UPDATED', 'ADMIN_2FA_SETUP',
+  'ADMIN_USER_ACTIVATED', 'ADMIN_USER_SUSPENDED', 'ADMIN_USER_BLOCKED', 'ADMIN_USER_EDITED', 'ADMIN_USER_DELETED',
+  'ADMIN_INVITED', 'ADMIN_PERMISSIONS_UPDATED', 'ADMIN_DEACTIVATED',
+  'ADMIN_SETTINGS_UPDATED', 'ADMIN_CACHE_CLEARED', 'ADMIN_JOB_TRIGGERED', 'ADMIN_REPORT_EXPORTED',
+];
 
 export default function AuditLogsPage() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [action, setAction] = useState('');
+
+  useEffect(() => {
+    setPage(1);
+  }, [action]);
 
   useEffect(() => {
     setLoading(true);
-    adminAuditLogs.list({ page, limit: 50 })
+    const params: Record<string, unknown> = { page, limit: 50 };
+    if (action) params.action = action;
+    adminAuditLogs.list(params)
       .then((data) => { setLogs(data.content); setTotal(data.total); })
       .finally(() => setLoading(false));
-  }, [page]);
+  }, [page, action]);
 
   const totalPages = Math.ceil(total / 50);
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-xl font-semibold text-[#0E121B]">Audit Logs</h2>
-        <p className="text-sm text-[#717784]">{total.toLocaleString()} total admin actions recorded</p>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h2 className="text-xl font-semibold text-[#0E121B]">Audit Logs</h2>
+          <p className="text-sm text-[#717784]">{total.toLocaleString()} total admin actions recorded</p>
+        </div>
+        <select
+          value={action}
+          onChange={(e) => setAction(e.target.value)}
+          className="text-sm border border-[#E1E4EA] rounded-lg px-3 py-1.5 text-[#0E121B] focus:outline-none focus:ring-2 focus:ring-[#C5DB10] bg-white"
+        >
+          <option value="">All actions</option>
+          {ALL_ACTIONS.map((a) => (
+            <option key={a} value={a}>{a.replace(/^ADMIN_/, '').replace(/_/g, ' ')}</option>
+          ))}
+        </select>
       </div>
 
       <div className="bg-white rounded-xl border border-[#E1E4EA] overflow-hidden">

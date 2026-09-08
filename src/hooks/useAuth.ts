@@ -18,12 +18,16 @@ export function useAuth() {
   const [admin, setAdmin] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  function fetchMe() {
+    return adminAuth.me().then(setAdmin).catch(() => setAdmin(null));
+  }
+
   useEffect(() => {
     if (!isAuthenticated()) {
       setLoading(false);
       return;
     }
-    adminAuth.me().then(setAdmin).catch(() => setAdmin(null)).finally(() => setLoading(false));
+    fetchMe().finally(() => setLoading(false));
   }, []);
 
   const permissions = new Set(admin?.permissions.map((p) => p.permission) ?? []);
@@ -34,5 +38,6 @@ export function useAuth() {
     isSuperAdmin: admin?.isSuperAdmin ?? false,
     permissions,
     hasPermission: (key: string) => admin?.isSuperAdmin || permissions.has(key),
+    refreshAdmin: fetchMe,
   };
 }

@@ -62,7 +62,7 @@ function Feedback({ msg }: { msg: { type: 'ok' | 'err'; text: string } | null })
 }
 
 export default function SettingsPage() {
-  const { admin, isSuperAdmin, hasPermission } = useAuth();
+  const { admin, isSuperAdmin, hasPermission, refreshAdmin } = useAuth();
   const [tab, setTab] = useState<Tab>('profile');
 
   const [firstName, setFirstName] = useState('');
@@ -117,6 +117,7 @@ export default function SettingsPage() {
       });
       setProfileMsg({ type: 'ok', text: 'Profile updated successfully.' });
       setCurrentPassword(''); setNewPassword('');
+      void refreshAdmin();
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
       setProfileMsg({ type: 'err', text: msg ?? 'Failed to update profile.' });
