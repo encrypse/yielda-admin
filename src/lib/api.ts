@@ -47,8 +47,8 @@ export const adminAuth = {
 export const adminUsers = {
   list: (params?: object) => api.get('/admin/users', { params }).then((r) => r.data.data),
   get: (id: string) => api.get(`/admin/users/${id}`).then((r) => r.data.data),
-  updateStatus: (id: string, status: string) =>
-    api.patch(`/admin/users/${id}/status`, { status }).then((r) => r.data.data),
+  updateStatus: (id: string, status: string, password: string, reason?: string) =>
+    api.patch(`/admin/users/${id}/status`, { status, password, reason }).then((r) => r.data.data),
 };
 
 export const adminOrders = {
