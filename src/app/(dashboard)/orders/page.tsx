@@ -31,7 +31,7 @@ const STATUSES = ['SUBMITTED', 'SUBMITTING', 'PENDING', 'QUOTED', 'OFFLINE_QUOTE
 
 export default function OrdersPage() {
   const router = useRouter();
-  const { hasPermission } = useAuth();
+  const { hasPermission, loading: authLoading } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -45,7 +45,7 @@ export default function OrdersPage() {
   }, [status, side]);
 
   useEffect(() => {
-    if (!hasPermission('ORDERS_READ')) return;
+    if (authLoading || !hasPermission('ORDERS_READ')) return;
     setLoading(true);
     const params: Record<string, unknown> = { page, limit: 20 };
     if (status) params.status = status;
@@ -54,9 +54,9 @@ export default function OrdersPage() {
       setOrders(data.content);
       setTotal(data.total);
     }).finally(() => setLoading(false));
-  }, [page, status, side, hasPermission]);
+  }, [page, status, side, hasPermission, authLoading]);
 
-  if (!hasPermission('ORDERS_READ')) return <NoPermission section="Orders" />;
+  if (!authLoading && !hasPermission('ORDERS_READ')) return <NoPermission section="Orders" />;
 
   const totalPages = Math.ceil(total / 20);
 

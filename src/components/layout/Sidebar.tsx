@@ -23,9 +23,10 @@ const NAV = [
 type Props = {
   permissions: Set<string>;
   isSuperAdmin: boolean;
+  authLoading?: boolean;
 };
 
-export function Sidebar({ permissions, isSuperAdmin }: Props) {
+export function Sidebar({ permissions, isSuperAdmin, authLoading }: Props) {
   const pathname = usePathname();
 
   const visible = NAV.filter((item) => {
@@ -42,7 +43,14 @@ export function Sidebar({ permissions, isSuperAdmin }: Props) {
       </div>
 
       <nav className="flex-1 py-4 px-3 space-y-1">
-        {visible.map((item) => {
+        {authLoading ? (
+          Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-lg">
+              <div className="w-[18px] h-[18px] rounded bg-white/10 animate-pulse flex-shrink-0" />
+              <div className="h-3.5 rounded bg-white/10 animate-pulse flex-1" style={{ width: `${55 + (i % 3) * 15}%` }} />
+            </div>
+          ))
+        ) : visible.map((item) => {
           const active = pathname === item.href || (item.href !== '/' && pathname.startsWith(item.href));
           return (
             <Link

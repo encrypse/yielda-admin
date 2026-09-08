@@ -21,19 +21,19 @@ type WalletData = {
 };
 
 export default function WalletPage() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, loading: authLoading } = useAuth();
   const [data, setData] = useState<WalletData | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!hasPermission('WALLET_READ')) return;
+    if (authLoading || !hasPermission('WALLET_READ')) return;
     setLoading(true);
     adminWallet.settlement({ page }).then(setData).finally(() => setLoading(false));
-  }, [page, hasPermission]);
+  }, [page, hasPermission, authLoading]);
 
+  if (authLoading || loading) return <div className="h-48 bg-white rounded-xl animate-pulse" />;
   if (!hasPermission('WALLET_READ')) return <NoPermission section="Org Wallet" />;
-  if (loading) return <div className="h-48 bg-white rounded-xl animate-pulse" />;
 
   const w = data?.wallet;
   const ledger = data?.ledger;

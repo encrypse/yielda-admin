@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from 'sonner';
 import { getToken, clearToken, getPendingToken } from './auth';
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
@@ -18,6 +19,12 @@ api.interceptors.response.use(
     if (err.response?.status === 401 && !isAuthEndpoint && typeof window !== 'undefined') {
       clearToken();
       window.location.href = '/login';
+    }
+    if (err.response?.status === 403) {
+      toast.error('Permission denied', {
+        description: 'You don\'t have permission to perform this action.',
+        id: 'forbidden',
+      });
     }
     return Promise.reject(err);
   },

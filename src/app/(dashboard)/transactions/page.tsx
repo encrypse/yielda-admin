@@ -21,7 +21,7 @@ const TX_COLOR: Record<string, string> = {
 };
 
 export default function TransactionsPage() {
-  const { hasPermission } = useAuth();
+  const { hasPermission, loading: authLoading } = useAuth();
   const [txns, setTxns] = useState<Transaction[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -33,7 +33,7 @@ export default function TransactionsPage() {
   }, [type]);
 
   useEffect(() => {
-    if (!hasPermission('TRANSACTIONS_READ')) return;
+    if (authLoading || !hasPermission('TRANSACTIONS_READ')) return;
     setLoading(true);
     const params: Record<string, unknown> = { page, limit: 25 };
     if (type) params.type = type;
@@ -41,9 +41,9 @@ export default function TransactionsPage() {
       setTxns(data.content);
       setTotal(data.total);
     }).finally(() => setLoading(false));
-  }, [page, type, hasPermission]);
+  }, [page, type, hasPermission, authLoading]);
 
-  if (!hasPermission('TRANSACTIONS_READ')) return <NoPermission section="Transactions" />;
+  if (!authLoading && !hasPermission('TRANSACTIONS_READ')) return <NoPermission section="Transactions" />;
 
   const totalPages = Math.ceil(total / 25);
 

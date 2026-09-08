@@ -21,7 +21,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 export default function UsersPage() {
   const router = useRouter();
-  const { hasPermission } = useAuth();
+  const { hasPermission, loading: authLoading } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -29,14 +29,14 @@ export default function UsersPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!hasPermission('USERS_READ')) return;
+    if (authLoading || !hasPermission('USERS_READ')) return;
     setLoading(true);
     adminUsers.list({ page, limit: 20, search: search || undefined })
       .then((data) => { setUsers(data.content); setTotal(data.total); })
       .finally(() => setLoading(false));
-  }, [page, search, hasPermission]);
+  }, [page, search, hasPermission, authLoading]);
 
-  if (!hasPermission('USERS_READ')) return <NoPermission section="Users" />;
+  if (!authLoading && !hasPermission('USERS_READ')) return <NoPermission section="Users" />;
 
   const totalPages = Math.ceil(total / 20);
 

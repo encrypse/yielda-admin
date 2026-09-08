@@ -45,7 +45,7 @@ const ALL_ACTIONS = [
 ];
 
 export default function AuditLogsPage() {
-  const { isSuperAdmin } = useAuth();
+  const { isSuperAdmin, loading: authLoading } = useAuth();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -57,18 +57,18 @@ export default function AuditLogsPage() {
   }, [action]);
 
   useEffect(() => {
-    if (!isSuperAdmin) return;
+    if (authLoading || !isSuperAdmin) return;
     setLoading(true);
     const params: Record<string, unknown> = { page, limit: 50 };
     if (action) params.action = action;
     adminAuditLogs.list(params)
       .then((data) => { setLogs(data.content); setTotal(data.total); })
       .finally(() => setLoading(false));
-  }, [page, action, isSuperAdmin]);
+  }, [page, action, isSuperAdmin, authLoading]);
 
   const totalPages = Math.ceil(total / 50);
 
-  if (!isSuperAdmin) return <NoPermission section="Audit Logs" />;
+  if (!authLoading && !isSuperAdmin) return <NoPermission section="Audit Logs" />;
 
   return (
     <div className="space-y-4">
