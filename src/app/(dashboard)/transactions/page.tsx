@@ -5,6 +5,8 @@ import { formatDate, formatMoney } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { NoPermission } from '@/components/NoPermission';
 
 type Transaction = {
   id: string; transactionType: string; balanceType: string; amount: string;
@@ -19,6 +21,7 @@ const TX_COLOR: Record<string, string> = {
 };
 
 export default function TransactionsPage() {
+  const { hasPermission } = useAuth();
   const [txns, setTxns] = useState<Transaction[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -30,6 +33,7 @@ export default function TransactionsPage() {
   }, [type]);
 
   useEffect(() => {
+    if (!hasPermission('TRANSACTIONS_READ')) return;
     setLoading(true);
     const params: Record<string, unknown> = { page, limit: 25 };
     if (type) params.type = type;
@@ -37,7 +41,9 @@ export default function TransactionsPage() {
       setTxns(data.content);
       setTotal(data.total);
     }).finally(() => setLoading(false));
-  }, [page, type]);
+  }, [page, type, hasPermission]);
+
+  if (!hasPermission('TRANSACTIONS_READ')) return <NoPermission section="Transactions" />;
 
   const totalPages = Math.ceil(total / 25);
 

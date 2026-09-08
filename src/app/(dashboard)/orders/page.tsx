@@ -6,6 +6,8 @@ import { formatDate, formatMoney, downloadBlob } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ExportModal } from '@/components/ExportModal';
+import { useAuth } from '@/hooks/useAuth';
+import { NoPermission } from '@/components/NoPermission';
 import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 
 type Order = {
@@ -29,6 +31,7 @@ const STATUSES = ['SUBMITTED', 'SUBMITTING', 'PENDING', 'QUOTED', 'OFFLINE_QUOTE
 
 export default function OrdersPage() {
   const router = useRouter();
+  const { hasPermission } = useAuth();
   const [orders, setOrders] = useState<Order[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -42,6 +45,7 @@ export default function OrdersPage() {
   }, [status, side]);
 
   useEffect(() => {
+    if (!hasPermission('ORDERS_READ')) return;
     setLoading(true);
     const params: Record<string, unknown> = { page, limit: 20 };
     if (status) params.status = status;
@@ -50,7 +54,9 @@ export default function OrdersPage() {
       setOrders(data.content);
       setTotal(data.total);
     }).finally(() => setLoading(false));
-  }, [page, status, side]);
+  }, [page, status, side, hasPermission]);
+
+  if (!hasPermission('ORDERS_READ')) return <NoPermission section="Orders" />;
 
   const totalPages = Math.ceil(total / 20);
 

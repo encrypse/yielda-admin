@@ -1,6 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { adminMetrics } from '@/lib/api';
+import { useAuth } from '@/hooks/useAuth';
+import { NoPermission } from '@/components/NoPermission';
 import { formatMoney } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Users, ShoppingCart, Clock, Wallet, TrendingUp, Building2 } from 'lucide-react';
@@ -56,12 +58,14 @@ function compactCount(v: number): string {
 }
 
 export default function DashboardPage() {
+  const { hasPermission, loading: authLoading } = useAuth();
   const [overview, setOverview] = useState<Overview | null>(null);
   const [registrations, setRegistrations] = useState<{ date: string; count: number }[]>([]);
   const [tradeVolume, setTradeVolume] = useState<{ date: string; volume: number }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (authLoading || !hasPermission('METRICS_READ')) return;
     Promise.all([
       adminMetrics.overview(),
       adminMetrics.registrations(30),
@@ -71,9 +75,11 @@ export default function DashboardPage() {
       setRegistrations(fillDays(regs, 30, (date) => ({ date, count: 0 })));
       setTradeVolume(fillDays(tv, 30, (date) => ({ date, volume: 0 })));
     }).finally(() => setLoading(false));
-  }, []);
+  }, [authLoading, hasPermission]);
 
-  if (loading) {
+  if (!authLoading && !hasPermission('METRICS_READ')) return <NoPermission section="Dashboard Metrics" />;
+
+  if (loading || authLoading) {
     return (
       <div className="space-y-4">
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">

@@ -63,6 +63,14 @@ function Feedback({ msg }: { msg: { type: 'ok' | 'err'; text: string } | null })
 
 export default function SettingsPage() {
   const { admin, isSuperAdmin, hasPermission, refreshAdmin } = useAuth();
+
+  const tabs: { key: Tab; label: string; icon: React.ElementType; show: boolean }[] = [
+    { key: 'profile',     label: 'Profile',     icon: User,             show: true },
+    { key: 'security',    label: 'Security',    icon: Shield,           show: true },
+    { key: 'financial',   label: 'Financial',   icon: SlidersHorizontal, show: isSuperAdmin || hasPermission('SETTINGS_READ') },
+    { key: 'maintenance', label: 'Maintenance', icon: Wrench,           show: isSuperAdmin || hasPermission('MAINTENANCE_RUN') },
+  ];
+
   const [tab, setTab] = useState<Tab>('profile');
 
   const [firstName, setFirstName] = useState('');
@@ -104,7 +112,7 @@ export default function SettingsPage() {
     if (tab === 'maintenance' && (hasPermission('MAINTENANCE_RUN') || isSuperAdmin)) {
       adminMaintenance.jobs().then(setJobs);
     }
-  }, [tab]);
+  }, [tab, isSuperAdmin, hasPermission]);
 
   async function saveProfile() {
     setProfileSaving(true); setProfileMsg(null);
@@ -163,13 +171,6 @@ export default function SettingsPage() {
       setRunningJob(null);
     }
   }
-
-  const tabs: { key: Tab; label: string; icon: React.ElementType; show: boolean }[] = [
-    { key: 'profile', label: 'Profile', icon: User, show: true },
-    { key: 'security', label: 'Security', icon: Shield, show: true },
-    { key: 'financial', label: 'Financial', icon: SlidersHorizontal, show: isSuperAdmin || hasPermission('SETTINGS_READ') },
-    { key: 'maintenance', label: 'Maintenance', icon: Wrench, show: isSuperAdmin || hasPermission('MAINTENANCE_RUN') },
-  ];
 
   return (
     <div className="space-y-4">

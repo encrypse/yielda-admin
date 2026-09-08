@@ -6,6 +6,8 @@ import { formatDate, formatMoney } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { NoPermission } from '@/components/NoPermission';
 
 type Settlement = {
   id: string; status: string; queueStatus: string; amountDue: string; createdAt: string;
@@ -24,6 +26,7 @@ const QUEUE_STATUSES = ['', 'QUEUED', 'PROCESSING', 'DONE', 'FAILED'];
 
 export default function SettlementsPage() {
   const router = useRouter();
+  const { hasPermission } = useAuth();
   const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -37,6 +40,7 @@ export default function SettlementsPage() {
   }, [status, queueStatus]);
 
   useEffect(() => {
+    if (!hasPermission('SETTLEMENTS_READ')) return;
     setLoading(true);
     const params: Record<string, unknown> = { page, limit: 20 };
     if (status) params.status = status;
@@ -45,7 +49,9 @@ export default function SettlementsPage() {
       setSettlements(data.content);
       setTotal(data.total);
     }).finally(() => setLoading(false));
-  }, [page, status, queueStatus]);
+  }, [page, status, queueStatus, hasPermission]);
+
+  if (!hasPermission('SETTLEMENTS_READ')) return <NoPermission section="Settlements" />;
 
   const totalPages = Math.ceil(total / 20);
 

@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { UserPlus, Copy, Check } from 'lucide-react';
+import { UserPlus, Copy, Check, Pencil } from 'lucide-react';
 
 type AdminUser = {
   id: string; email: string; firstName: string; lastName: string;
@@ -31,6 +31,11 @@ export default function AdminsPage() {
   const [inviteLink, setInviteLink] = useState('');
   const [invitedEmail, setInvitedEmail] = useState('');
   const [copied, setCopied] = useState(false);
+
+  const [editAdmin, setEditAdmin] = useState<AdminUser | null>(null);
+  const [editPerms, setEditPerms] = useState<string[]>([]);
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
 
   function load() {
     return adminAdmins.list().then(setAdmins);
@@ -81,6 +86,32 @@ export default function AdminsPage() {
   async function toggleActive(admin: AdminUser) {
     await adminAdmins.update(admin.id, { isActive: !admin.isActive });
     await load();
+  }
+
+  function openEdit(admin: AdminUser) {
+    setEditAdmin(admin);
+    setEditPerms([...admin.permissions]);
+    setEditError('');
+  }
+
+  function toggleEditPerm(key: string) {
+    setEditPerms((prev) => prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]);
+  }
+
+  async function handleEditSave() {
+    if (!editAdmin) return;
+    setEditSaving(true);
+    setEditError('');
+    try {
+      const updated = await adminAdmins.update(editAdmin.id, { permissions: editPerms });
+      setAdmins((prev) => prev.map((a) => a.id === editAdmin.id ? { ...a, permissions: updated.permissions } : a));
+      setEditAdmin(null);
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
+      setEditError(msg ?? 'Failed to save permissions');
+    } finally {
+      setEditSaving(false);
+    }
   }
 
   if (!isSuperAdmin) return <p className="text-[#717784]">Access restricted to superadmin.</p>;
@@ -142,9 +173,14 @@ export default function AdminsPage() {
                 <td className="px-4 py-3 text-[#717784]">{formatDate(a.createdAt, 'dd MMM yyyy')}</td>
                 <td className="px-4 py-3">
                   {!a.isSuperAdmin && (
-                    <Button size="sm" variant="outline" onClick={() => toggleActive(a)} className={a.isActive ? 'text-[#FF3B30] border-[#FF3B30]/30' : 'text-[#12B76A] border-[#12B76A]/30'}>
-                      {a.isActive ? 'Deactivate' : 'Activate'}
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" onClick={() => openEdit(a)} className="gap-1.5">
+                        <Pencil size={13} /> Edit
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => toggleActive(a)} className={a.isActive ? 'text-[#FF3B30] border-[#FF3B30]/30' : 'text-[#12B76A] border-[#12B76A]/30'}>
+                        {a.isActive ? 'Deactivate' : 'Activate'}
+                      </Button>
+                    </div>
                   )}
                 </td>
               </tr>
@@ -152,6 +188,46 @@ export default function AdminsPage() {
           </tbody>
         </table>
       </div>
+
+      {/* Edit Permissions Dialog */}
+      <Dialog open={!!editAdmin} onOpenChange={(o) => { if (!o) setEditAdmin(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Permissions</DialogTitle>
+          </DialogHeader>
+          {editAdmin && (
+            <div className="space-y-4">
+              <p className="text-sm text-[#717784]">
+                Updating permissions for <strong className="text-[#0E121B]">{editAdmin.email}</strong>
+              </p>
+              <div className="grid grid-cols-2 gap-2 max-h-56 overflow-y-auto">
+                {permDefs.map((p) => (
+                  <label key={p.key} className="flex items-center gap-2 text-sm cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={editPerms.includes(p.key)}
+                      onChange={() => toggleEditPerm(p.key)}
+                      className="accent-[#C5DB10] w-4 h-4"
+                    />
+                    <span className="text-[#0E121B]">{p.label}</span>
+                  </label>
+                ))}
+              </div>
+              {editError && <p className="text-sm text-[#FF3B30]">{editError}</p>}
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setEditAdmin(null)} disabled={editSaving}>Cancel</Button>
+                <Button
+                  onClick={handleEditSave}
+                  disabled={editSaving}
+                  className="bg-[#C5DB10] text-[#0E121B] hover:bg-[#b0c40e] font-semibold"
+                >
+                  {editSaving ? 'Saving…' : 'Save Permissions'}
+                </Button>
+              </DialogFooter>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={inviteOpen} onOpenChange={(o) => { if (!o) closeDialog(); }}>
         <DialogContent className="sm:max-w-md">

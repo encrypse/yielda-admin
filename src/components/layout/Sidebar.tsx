@@ -9,15 +9,15 @@ import {
 import { cn } from '@/lib/utils';
 
 const NAV = [
-  { label: 'Dashboard', href: '/', icon: LayoutDashboard, permission: null },
-  { label: 'Users', href: '/users', icon: Users, permission: 'USERS_READ' },
-  { label: 'Orders', href: '/orders', icon: ShoppingCart, permission: 'ORDERS_READ' },
-  { label: 'Settlements', href: '/settlements', icon: ArrowLeftRight, permission: 'SETTLEMENTS_READ' },
-  { label: 'Transactions', href: '/transactions', icon: Landmark, permission: 'TRANSACTIONS_READ' },
-  { label: 'Wallet', href: '/wallet', icon: Wallet, permission: 'WALLET_READ' },
-  { label: 'Admins', href: '/admins', icon: Shield, permission: 'ADMINS_MANAGE' },
-  { label: 'Audit Logs', href: '/audit-logs', icon: ScrollText, permission: 'ADMINS_MANAGE' },
-  { label: 'Settings', href: '/settings', icon: Settings, permission: null },
+  { label: 'Dashboard',    href: '/',            icon: LayoutDashboard, permission: 'METRICS_READ',      superAdminOnly: false },
+  { label: 'Users',        href: '/users',        icon: Users,           permission: 'USERS_READ',        superAdminOnly: false },
+  { label: 'Orders',       href: '/orders',       icon: ShoppingCart,    permission: 'ORDERS_READ',       superAdminOnly: false },
+  { label: 'Settlements',  href: '/settlements',  icon: ArrowLeftRight,  permission: 'SETTLEMENTS_READ',  superAdminOnly: false },
+  { label: 'Transactions', href: '/transactions', icon: Landmark,        permission: 'TRANSACTIONS_READ', superAdminOnly: false },
+  { label: 'Wallet',       href: '/wallet',       icon: Wallet,          permission: 'WALLET_READ',       superAdminOnly: false },
+  { label: 'Admins',       href: '/admins',       icon: Shield,          permission: 'ADMINS_MANAGE',     superAdminOnly: false },
+  { label: 'Audit Logs',   href: '/audit-logs',   icon: ScrollText,      permission: null,                superAdminOnly: true  },
+  { label: 'Settings',     href: '/settings',     icon: Settings,        permission: null,                superAdminOnly: false },
 ];
 
 type Props = {
@@ -28,9 +28,11 @@ type Props = {
 export function Sidebar({ permissions, isSuperAdmin }: Props) {
   const pathname = usePathname();
 
-  const visible = NAV.filter(
-    (item) => !item.permission || isSuperAdmin || permissions.has(item.permission),
-  );
+  const visible = NAV.filter((item) => {
+    if (item.superAdminOnly) return isSuperAdmin;
+    if (!item.permission) return true;
+    return isSuperAdmin || permissions.has(item.permission);
+  });
 
   return (
     <aside className="w-60 h-full flex flex-col overflow-y-auto" style={{ background: '#2C3E4F' }}>

@@ -6,6 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { NoPermission } from '@/components/NoPermission';
 
 type WalletData = {
   wallet: {
@@ -19,15 +21,18 @@ type WalletData = {
 };
 
 export default function WalletPage() {
+  const { hasPermission } = useAuth();
   const [data, setData] = useState<WalletData | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!hasPermission('WALLET_READ')) return;
     setLoading(true);
     adminWallet.settlement({ page }).then(setData).finally(() => setLoading(false));
-  }, [page]);
+  }, [page, hasPermission]);
 
+  if (!hasPermission('WALLET_READ')) return <NoPermission section="Org Wallet" />;
   if (loading) return <div className="h-48 bg-white rounded-xl animate-pulse" />;
 
   const w = data?.wallet;
