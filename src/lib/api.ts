@@ -125,5 +125,6 @@ export const adminAuditLogs = {
 export const adminUsersExtra = {
   edit: (id: string, data: { firstName?: string; lastName?: string; phoneNumber?: string }) =>
     api.patch(`/admin/users/${id}`, data).then((r) => r.data.data),
-  delete: (id: string) => api.delete(`/admin/users/${id}`).then((r) => r.data),
+  retryBrokerAccount: (id: string) =>
+    api.post(`/admin/users/${id}/retry-broker-account`).then((r) => r.data.data),
 };

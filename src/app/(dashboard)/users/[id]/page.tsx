@@ -2,11 +2,12 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { adminUsers, adminOrders, adminReports, adminUsersExtra } from '@/lib/api';
+import { toast } from 'sonner';
 import { formatDate, formatMoney, downloadBlob } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ExportModal } from '@/components/ExportModal';
-import { ChevronLeft, Download, Pencil, Trash2, User, ShieldCheck, ClipboardList, TrendingUp, X, ZoomIn } from 'lucide-react';
+import { ChevronLeft, Download, Pencil, RefreshCw, User, ShieldCheck, ClipboardList, TrendingUp, X, ZoomIn } from 'lucide-react';
 
 type KycProfile = {
   id: string;
@@ -58,7 +59,7 @@ const STATUS_COLOR: Record<string, string> = {
 
 const STATUS_DESC: Record<string, string> = {
   ACTIVE: 'Can log in and trade',
-  PENDING: 'Awaiting broker account confirmation',
+  PENDING: 'Awaiting Naya broker account setup — app account is not locked',
   SUSPENDED: 'Blocked from login and trading',
 };
 
@@ -228,7 +229,7 @@ export default function UserDetailPage() {
   const [updating, setUpdating] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ firstName: '', lastName: '', phoneNumber: '' });
-  const [deleting, setDeleting] = useState(false);
+  const [retryingBroker, setRetryingBroker] = useState(false);
   const [tab, setTab] = useState<Tab>('overview');
 
   const [orders, setOrders] = useState<Order[]>([]);
@@ -297,14 +298,24 @@ export default function UserDetailPage() {
     }
   }
 
-  async function deleteUser() {
-    if (!confirm('Permanently delete this user account? This cannot be undone.')) return;
-    setDeleting(true);
+  async function retryBrokerAccount() {
+    setRetryingBroker(true);
     try {
-      await adminUsersExtra.delete(id);
-      router.push('/users');
+      const result = await adminUsersExtra.retryBrokerAccount(id);
+      if (result?.action === 'status_checked') {
+        toast.info('Creation already in progress', {
+          description: `Naya already received this request. Status: ${result.status ?? 'unknown'} (code ${result.statusCode ?? '?'})`,
+          duration: 8000,
+        });
+      } else {
+        toast.success('Re-submitted to Naya', {
+          description: 'Account creation re-sent. The system will check for activation in ~20 minutes.',
+        });
+      }
+    } catch {
+      // errors handled globally by api interceptor
     } finally {
-      setDeleting(false);
+      setRetryingBroker(false);
     }
   }
 
@@ -401,6 +412,15 @@ export default function UserDetailPage() {
               </div>
             </div>
 
+            {/* PENDING status explanation */}
+            {user.accountStatus === 'PENDING' && (
+              <div className="mt-3 flex items-start gap-2 bg-[#EDF0F7] rounded-lg px-3 py-2.5">
+                <span className="text-xs text-[#717784] leading-relaxed">
+                  <strong className="text-[#0E121B]">PENDING</strong> refers to the <strong className="text-[#0E121B]">Naya broker account</strong> setup — not the app account. The app account is active; the user can log in but cannot trade until the Naya broker account is ready.
+                </span>
+              </div>
+            )}
+
           </div>
         </div>
 
@@ -412,21 +432,25 @@ export default function UserDetailPage() {
           <Button size="sm" variant="outline" onClick={startEdit} className="h-8 text-xs gap-1.5">
             <Pencil size={13} /> Edit
           </Button>
-          {user.accountStatus === 'ACTIVE' ? (
+          {user.accountStatus === 'ACTIVE' && (
             <Button size="sm" onClick={() => setConfirmModal({ targetStatus: 'SUSPENDED' })}
               className="h-8 text-xs bg-[#D99800] text-white hover:bg-yellow-600">
               Suspend
             </Button>
-          ) : (
+          )}
+          {user.accountStatus === 'SUSPENDED' && (
             <Button size="sm" onClick={() => setConfirmModal({ targetStatus: 'ACTIVE' })}
               className="h-8 text-xs bg-[#12B76A] text-white hover:bg-green-600">
               Activate
             </Button>
           )}
-          <Button size="sm" variant="outline" onClick={deleteUser} disabled={deleting}
-            className="h-8 text-xs gap-1.5 border-[#FF3B30] text-[#FF3B30] hover:bg-[#FFF6F6] ml-auto">
-            <Trash2 size={13} /> Delete
-          </Button>
+          {user.accountStatus === 'PENDING' && !user.brokerAccNo && kycStatus === 'APPROVED' && (
+            <Button size="sm" variant="outline" onClick={retryBrokerAccount} disabled={retryingBroker}
+              className="h-8 text-xs gap-1.5">
+              <RefreshCw size={13} className={retryingBroker ? 'animate-spin' : ''} />
+              {retryingBroker ? 'Scheduling…' : 'Retry Naya Broker Account'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -461,10 +485,13 @@ export default function UserDetailPage() {
             <div>
               <Field label="Member Since" value={formatDate(user.createdAt)} />
               <Field label="Account Status" value={
-                <Badge className={`text-xs border ${STATUS_COLOR[user.accountStatus] ?? ''}`}>{user.accountStatus}</Badge>
+                <span className="flex items-center gap-1.5">
+                  <Badge className={`text-xs border ${STATUS_COLOR[user.accountStatus] ?? ''}`}>{user.accountStatus}</Badge>
+                  {user.accountStatus === 'PENDING' && <span className="text-xs text-[#717784]">(Naya broker account pending)</span>}
+                </span>
               } />
               <Field label="Tier" value={<span className="text-xs bg-[#EDF0F7] text-[#717784] px-2 py-0.5 rounded-full">{user.tier}</span>} />
-              <Field label="Broker Acc No." value={user.brokerAccNo ? <span className="font-mono text-xs">{user.brokerAccNo}</span> : '—'} />
+              <Field label="Broker Acc No. (Naya)" value={user.brokerAccNo ? <span className="font-mono text-xs">{user.brokerAccNo}</span> : '—'} />
               <Field label="CHN" value={user.chn ? <span className="font-mono text-xs">{user.chn}</span> : '—'} />
             </div>
           </div>
@@ -514,7 +541,7 @@ export default function UserDetailPage() {
                 <Field label="Liveness Ref" value={kyc?.livenessRef ? <span className="font-mono text-xs text-[#717784]">{kyc.livenessRef}</span> : '—'} />
               </div>
               <div>
-                <Field label="Maya KYC Ref" value={
+                <Field label="Naya KYC Ref" value={
                   (user.mayaKycRefNo || kyc?.mayaKycRefNo)
                     ? <span className="font-mono text-xs">{user.mayaKycRefNo ?? kyc?.mayaKycRefNo}</span>
                     : '—'
