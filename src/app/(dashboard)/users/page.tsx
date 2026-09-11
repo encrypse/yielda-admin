@@ -10,13 +10,20 @@ import { Search, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { NoPermission } from '@/components/NoPermission';
 
-type User = { id: string; firstName: string; lastName: string; email: string; accountStatus: string; tier: string; createdAt: string };
+type User = { id: string; firstName: string; lastName: string; email: string; phoneNumber: string | null; accountStatus: string; kycStatus: string; tier: string; brokerAccNo: string | null; createdAt: string };
 
 const STATUS_COLOR: Record<string, string> = {
   ACTIVE: 'bg-[#F6FFF9] text-[#12B76A] border-[#12B76A]/20',
   BLOCKED: 'bg-[#FFF6F6] text-[#FF3B30] border-[#FF3B30]/20',
   SUSPENDED: 'bg-[#FFF6BD] text-[#D99800] border-[#D99800]/20',
   PENDING: 'bg-[#EDF0F7] text-[#717784] border-[#E1E4EA]',
+};
+
+const KYC_COLOR: Record<string, string> = {
+  APPROVED: 'bg-[#F6FFF9] text-[#12B76A] border-[#12B76A]/20',
+  IN_REVIEW: 'bg-[#FFF6BD] text-[#D99800] border-[#D99800]/20',
+  FAILED: 'bg-[#FFF6F6] text-[#FF3B30] border-[#FF3B30]/20',
+  NOT_SUBMITTED: 'bg-[#EDF0F7] text-[#717784] border-[#E1E4EA]',
 };
 
 export default function UsersPage() {
@@ -59,7 +66,9 @@ export default function UsersPage() {
             <tr className="border-b border-[#E1E4EA] bg-[#F5F7FA]">
               <th className="text-left px-4 py-3 text-xs font-semibold text-[#717784] uppercase tracking-wide">Name</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-[#717784] uppercase tracking-wide">Email</th>
-              <th className="text-left px-4 py-3 text-xs font-semibold text-[#717784] uppercase tracking-wide">Status</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-[#717784] uppercase tracking-wide">Phone</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-[#717784] uppercase tracking-wide">Broker Acc Status</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-[#717784] uppercase tracking-wide">KYC</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-[#717784] uppercase tracking-wide">Tier</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-[#717784] uppercase tracking-wide">Joined</th>
             </tr>
@@ -68,7 +77,7 @@ export default function UsersPage() {
             {loading ? (
               Array.from({ length: 8 }).map((_, i) => (
                 <tr key={i} className="border-b border-[#E1E4EA]">
-                  {Array.from({ length: 5 }).map((_, j) => (
+                  {Array.from({ length: 7 }).map((_, j) => (
                     <td key={j} className="px-4 py-3"><div className="h-4 bg-[#EDF0F7] rounded animate-pulse" /></td>
                   ))}
                 </tr>
@@ -77,9 +86,15 @@ export default function UsersPage() {
               <tr key={user.id} className="border-b border-[#E1E4EA] hover:bg-[#F5F7FA] cursor-pointer" onClick={() => router.push(`/users/${user.id}`)}>
                 <td className="px-4 py-3 font-medium text-[#0E121B]">{user.firstName} {user.lastName}</td>
                 <td className="px-4 py-3 text-[#717784]">{user.email}</td>
+                <td className="px-4 py-3 text-[#717784]">{user.phoneNumber ?? '—'}</td>
                 <td className="px-4 py-3">
                   <Badge className={`text-xs border ${STATUS_COLOR[user.accountStatus] ?? 'bg-[#EDF0F7] text-[#717784]'}`}>
                     {user.accountStatus}
+                  </Badge>
+                </td>
+                <td className="px-4 py-3">
+                  <Badge className={`text-xs border ${KYC_COLOR[user.kycStatus] ?? 'bg-[#EDF0F7] text-[#717784]'}`}>
+                    {user.kycStatus?.replace(/_/g, ' ') ?? '—'}
                   </Badge>
                 </td>
                 <td className="px-4 py-3 text-[#717784]">{user.tier ?? '—'}</td>

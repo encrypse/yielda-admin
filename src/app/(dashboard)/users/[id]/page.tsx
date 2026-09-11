@@ -299,6 +299,12 @@ export default function UserDetailPage() {
   }
 
   async function retryBrokerAccount() {
+    if (kycStatus !== 'APPROVED') {
+      toast.warning('KYC not approved', {
+        description: "This user's KYC is still pending. Broker account creation requires an approved KYC.",
+      });
+      return;
+    }
     setRetryingBroker(true);
     try {
       const result = await adminUsersExtra.retryBrokerAccount(id);
@@ -385,7 +391,7 @@ export default function UserDetailPage() {
             {/* Labeled status chips */}
             <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3">
               <div className="flex items-center gap-1.5">
-                <span className="text-xs text-[#717784]">Account</span>
+                <span className="text-xs text-[#717784]">Broker Account</span>
                 <Badge
                   title={STATUS_DESC[user.accountStatus]}
                   className={`text-xs border cursor-help ${STATUS_COLOR[user.accountStatus] ?? 'bg-[#EDF0F7] text-[#717784] border-[#E1E4EA]'}`}
@@ -412,14 +418,6 @@ export default function UserDetailPage() {
               </div>
             </div>
 
-            {/* PENDING status explanation */}
-            {user.accountStatus === 'PENDING' && (
-              <div className="mt-3 flex items-start gap-2 bg-[#EDF0F7] rounded-lg px-3 py-2.5">
-                <span className="text-xs text-[#717784] leading-relaxed">
-                  <strong className="text-[#0E121B]">PENDING</strong> refers to the <strong className="text-[#0E121B]">Naya broker account</strong> setup — not the app account. The app account is active; the user can log in but cannot trade until the Naya broker account is ready.
-                </span>
-              </div>
-            )}
 
           </div>
         </div>
@@ -444,7 +442,7 @@ export default function UserDetailPage() {
               Activate
             </Button>
           )}
-          {user.accountStatus === 'PENDING' && !user.brokerAccNo && kycStatus === 'APPROVED' && (
+          {user.accountStatus === 'PENDING' && !user.brokerAccNo && (
             <Button size="sm" variant="outline" onClick={retryBrokerAccount} disabled={retryingBroker}
               className="h-8 text-xs gap-1.5">
               <RefreshCw size={13} className={retryingBroker ? 'animate-spin' : ''} />
