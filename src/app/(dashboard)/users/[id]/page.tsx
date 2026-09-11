@@ -230,6 +230,8 @@ export default function UserDetailPage() {
   const [editing, setEditing] = useState(false);
   const [editForm, setEditForm] = useState({ firstName: '', lastName: '', phoneNumber: '' });
   const [retryingBroker, setRetryingBroker] = useState(false);
+  const [nayaSheet, setNayaSheet] = useState<{ status?: string; statusCode?: string; kycRefNo?: string } | null>(null);
+  const [forceRetrying, setForceRetrying] = useState(false);
   const [tab, setTab] = useState<Tab>('overview');
 
   const [orders, setOrders] = useState<Order[]>([]);
@@ -309,9 +311,10 @@ export default function UserDetailPage() {
     try {
       const result = await adminUsersExtra.retryBrokerAccount(id);
       if (result?.action === 'status_checked') {
-        toast.info('Creation already in progress', {
-          description: `Naya already received this request. Status: ${result.status ?? 'unknown'} (code ${result.statusCode ?? '?'})`,
-          duration: 8000,
+        setNayaSheet({
+          status: result.status,
+          statusCode: result.statusCode,
+          kycRefNo: user?.mayaKycRefNo ?? undefined,
         });
       } else {
         toast.success('Re-submitted to Naya', {
@@ -322,6 +325,23 @@ export default function UserDetailPage() {
       // errors handled globally by api interceptor
     } finally {
       setRetryingBroker(false);
+    }
+  }
+
+  async function forceRetryBrokerAccount() {
+    setForceRetrying(true);
+    try {
+      await adminUsersExtra.forceRetryBrokerAccount(id);
+      setNayaSheet(null);
+      toast.success('Force re-submitted to Naya', {
+        description: 'Stale reference cleared and creation re-sent. Check back in ~20 minutes.',
+      });
+      const updated = await adminUsers.get(id);
+      setUser(updated);
+    } catch {
+      // errors handled globally by api interceptor
+    } finally {
+      setForceRetrying(false);
     }
   }
 
@@ -357,6 +377,65 @@ export default function UserDetailPage() {
     <div className="space-y-4">
       {imageModal && (
         <ImageModal src={imageModal.src} label={imageModal.label} onClose={() => setImageModal(null)} />
+      )}
+
+      {/* Naya account creation data sheet */}
+      {nayaSheet && (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="flex-1 bg-black/40" onClick={() => setNayaSheet(null)} />
+          <div className="w-full max-w-lg bg-white h-full flex flex-col shadow-2xl">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-[#E1E4EA]">
+              <h3 className="text-base font-semibold text-[#0E121B]">Naya Account Creation Data</h3>
+              <button onClick={() => setNayaSheet(null)} className="text-[#717784] hover:text-[#0E121B]">
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
+              {/* Status from Naya */}
+              <div>
+                <p className="text-xs font-semibold text-[#717784] uppercase tracking-wide mb-2">Naya Status Response</p>
+                <div className="bg-[#FFF6F6] border border-[#FF3B30]/20 rounded-lg px-4 py-3 space-y-1">
+                  <p className="text-sm text-[#0E121B]"><span className="text-[#717784]">Status:</span> {nayaSheet.status ?? '—'}</p>
+                  <p className="text-sm text-[#0E121B]"><span className="text-[#717784]">Code:</span> {nayaSheet.statusCode ?? '—'}</p>
+                  <p className="text-sm text-[#0E121B]"><span className="text-[#717784]">Naya KYC Ref:</span> <span className="font-mono">{nayaSheet.kycRefNo ?? '—'}</span></p>
+                </div>
+              </div>
+
+              {/* Data sent to Naya */}
+              <div>
+                <p className="text-xs font-semibold text-[#717784] uppercase tracking-wide mb-2">Data Sent to Naya</p>
+                <div className="bg-[#F5F7FA] rounded-lg px-4 py-3">
+                  {user?.kycProfile?.tier1Data ? (
+                    <pre className="text-xs text-[#0E121B] whitespace-pre-wrap break-all leading-relaxed">
+                      {JSON.stringify(user.kycProfile.tier1Data, null, 2)}
+                    </pre>
+                  ) : (
+                    <p className="text-sm text-[#717784]">No tier 1 KYC data on record.</p>
+                  )}
+                </div>
+              </div>
+
+              {/* Instructions */}
+              <div className="bg-[#FFF6BD] border border-[#D99800]/20 rounded-lg px-4 py-3">
+                <p className="text-xs text-[#717784] leading-relaxed">
+                  Share the <strong className="text-[#0E121B]">Naya KYC Ref</strong> and the data above with Naya support to resolve the issue on their end. Once Naya confirms the application has been cleared, use <strong className="text-[#0E121B]">Force Re-submit</strong> below to re-create the account.
+                </p>
+              </div>
+            </div>
+
+            <div className="px-6 py-4 border-t border-[#E1E4EA]">
+              <Button
+                className="w-full bg-[#FF3B30] hover:bg-[#e53528] text-white"
+                onClick={forceRetryBrokerAccount}
+                disabled={forceRetrying}
+              >
+                {forceRetrying ? 'Re-submitting…' : 'Force Re-submit to Naya'}
+              </Button>
+              <p className="text-xs text-[#717784] text-center mt-2">Only use this after Naya has cleared the application on their end.</p>
+            </div>
+          </div>
+        </div>
       )}
       {exportOpen && (
         <ExportModal

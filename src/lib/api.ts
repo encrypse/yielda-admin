@@ -127,4 +127,6 @@ export const adminUsersExtra = {
     api.patch(`/admin/users/${id}`, data).then((r) => r.data.data),
   retryBrokerAccount: (id: string) =>
     api.post(`/admin/users/${id}/retry-broker-account`).then((r) => r.data.data),
+  forceRetryBrokerAccount: (id: string) =>
+    api.post(`/admin/users/${id}/force-retry-broker-account`).then((r) => r.data.data),
 };
