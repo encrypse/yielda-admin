@@ -1,19 +1,11 @@
 [build]
 builder = "nixpacks"
-buildCommand = "npm run build && cp -r .next/static .next/standalone/.next/static && cp -r public .next/standalone/public"
+buildCommand = "npm run build"
 
 [build.nixpacksPlan.phases.setup]
 nixPkgs = ["nodejs_20"]
 
 [deploy]
-startCommand = "node .next/standalone/server.js"
+startCommand = "npm start"
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
-
-[[deploy.environmentVariables]]
-name = "PORT"
-value = "${{PORT}}"
-
-[[deploy.environmentVariables]]
-name = "HOSTNAME"
-value = "0.0.0.0"
