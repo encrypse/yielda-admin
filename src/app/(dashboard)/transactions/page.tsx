@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { NoPermission } from '@/components/NoPermission';
+import { TransactionDrawer } from '@/components/TransactionDrawer';
 
 type Transaction = {
   id: string; transactionType: string; balanceType: string; amount: string;
-  reason: string; reference: string; createdAt: string;
+  reason: string | null; reference: string; createdAt: string;
   user: { firstName: string; lastName: string };
 };
 
@@ -27,6 +28,7 @@ export default function TransactionsPage() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [type, setType] = useState('');
+  const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
 
   useEffect(() => {
     setPage(1);
@@ -49,6 +51,7 @@ export default function TransactionsPage() {
 
   return (
     <div className="space-y-4">
+      {selectedTxId && <TransactionDrawer id={selectedTxId} onClose={() => setSelectedTxId(null)} />}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-xl font-semibold text-[#0E121B]">Transactions</h2>
@@ -83,7 +86,7 @@ export default function TransactionsPage() {
                 ))}
               </tr>
             )) : txns.map((tx) => (
-              <tr key={tx.id} className="border-b border-[#E1E4EA] hover:bg-[#F5F7FA]">
+              <tr key={tx.id} className="border-b border-[#E1E4EA] hover:bg-[#F5F7FA] cursor-pointer" onClick={() => setSelectedTxId(tx.id)}>
                 <td className="px-4 py-3 text-[#0E121B]">{tx.user.firstName} {tx.user.lastName}</td>
                 <td className="px-4 py-3">
                   <Badge className={`text-xs border ${TX_COLOR[tx.transactionType] ?? 'bg-[#EDF0F7] text-[#717784] border-[#E1E4EA]'}`}>
