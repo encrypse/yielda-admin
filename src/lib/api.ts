@@ -120,6 +120,7 @@ export const adminProfile = {
 
 export const adminAuditLogs = {
   list: (params?: object) => api.get('/admin/audit-logs', { params }).then((r) => r.data.data),
+  export: (params?: object) => api.get('/admin/audit-logs/export', { params, responseType: 'blob' }),
 };
 
 export const adminUsersExtra = {
