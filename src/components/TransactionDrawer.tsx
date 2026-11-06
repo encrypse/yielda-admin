@@ -41,7 +41,6 @@ const TX_COLOR: Record<string, string> = {
 
 function deriveCategory(tx: TransactionFull): string {
   if (tx.transactionType === 'REVERSED') return 'Reversal';
-  if (tx.transactionType === 'CREDIT' && tx.source === 'WEBHOOK') return 'Deposit';
   if (tx.transactionType === 'DEBIT' && tx.source === 'USER_ACTION') {
     const meta = tx.metadata as WithdrawalMeta | null;
     if (meta?.withdrawalAmount !== undefined) return 'Withdrawal';
@@ -55,8 +54,6 @@ function isWithdrawalMeta(meta: Record<string, unknown> | null): meta is Withdra
 }
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
-  if (value === null || value === undefined || value === '') return null;
-  return (
     <div className="py-3 flex items-start justify-between gap-4 border-b border-[#E1E4EA] last:border-0">
       <span className="text-sm text-[#717784] flex-shrink-0">{label}</span>
       <span className="text-sm font-medium text-[#0E121B] text-right break-all max-w-[65%]">{value}</span>
