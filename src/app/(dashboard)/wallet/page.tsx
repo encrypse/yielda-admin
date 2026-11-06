@@ -9,18 +9,25 @@ import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { NoPermission } from '@/components/NoPermission';
 
+type LedgerEntry = {
+  id: string; entryType: string; source: string; amount: string;
+  reference: string; providerReference: string | null; providerStatus: string | null;
+  reason: string; userId: string | null; createdAt: string;
+};
+
 type WalletData = {
   wallet: {
     orgAccountNumber: string; currency: string; provider: string;
     balance: string; totalCredit: string; totalDebit: string; status: string;
   };
   ledger: {
-    data: Array<{ id: string; entryType: string; source: string; amount: string; reference: string; providerReference: string | null; providerStatus: string | null; reason: string; createdAt: string }>;
+    data: LedgerEntry[];
     total: number; page: number; totalPages: number;
   };
 };
 
 export default function WalletPage() {
+  const router = useRouter();
   const { hasPermission, loading: authLoading } = useAuth();
   const [data, setData] = useState<WalletData | null>(null);
   const [page, setPage] = useState(1);
@@ -79,7 +86,11 @@ export default function WalletPage() {
             </thead>
             <tbody>
               {ledger?.data.map((e) => (
-                <tr key={e.id} className="border-b border-[#E1E4EA] last:border-0 hover:bg-[#F5F7FA]">
+                <tr
+                  key={e.id}
+                  className={`border-b border-[#E1E4EA] last:border-0 hover:bg-[#F5F7FA] ${e.userId ? 'cursor-pointer' : ''}`}
+                  onClick={() => { if (e.userId) router.push(`/users/${e.userId}`); }}
+                >
                   <td className="px-4 py-2.5">
                     <Badge className={`text-xs border ${e.entryType === 'CREDIT' ? 'bg-[#F6FFF9] text-[#12B76A] border-[#12B76A]/20' : 'bg-[#FFF6F6] text-[#FF3B30] border-[#FF3B30]/20'}`}>{e.entryType}</Badge>
                   </td>

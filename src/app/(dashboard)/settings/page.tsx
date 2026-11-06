@@ -24,13 +24,24 @@ function LastRun({ result }: { result: { at: Date; status: 'ok' | 'err' } | null
 
 type Tab = 'profile' | 'security' | 'financial' | 'maintenance';
 
-const SETTING_META: Record<string, { label: string; description: string; prefix?: string; suffix?: string }> = {
+const THRESHOLD_SETTING_META: Record<string, { label: string; description: string; prefix?: string; suffix?: string }> = {
   MIN_INVESTMENT_AMOUNT: { label: 'Minimum Investment', description: 'Smallest allowed investment in NGN', prefix: '₦' },
   MAX_INVESTMENT_AMOUNT: { label: 'Maximum Investment', description: 'Largest allowed investment in NGN', prefix: '₦' },
   MIN_WITHDRAWAL_AMOUNT: { label: 'Minimum Withdrawal', description: 'Smallest withdrawal allowed in NGN', prefix: '₦' },
   MAX_WITHDRAWAL_AMOUNT: { label: 'Maximum Withdrawal', description: 'Largest withdrawal allowed in NGN', prefix: '₦' },
   TRANSACTION_FEE_PERCENT: { label: 'Transaction Fee', description: 'Fee charged on each transaction', suffix: '%' },
   SETTLEMENT_CYCLE_DAYS: { label: 'Settlement Cycle', description: 'Number of days for settlement cycle', suffix: 'days' },
+};
+
+const FEE_SETTING_META: Record<string, { label: string; description: string; prefix?: string; suffix?: string }> = {
+  COLLECTION_FEE_AMOUNT: { label: 'Collection Fee', description: 'Base fee charged per inbound deposit (org-borne)', prefix: '₦' },
+  COLLECTION_FEE_VAT_PERCENT: { label: 'Collection Fee VAT', description: 'VAT applied to collection fee', suffix: '%' },
+  WITHDRAWAL_FEE_NON_STERLING: { label: 'Payout Fee (Non-Sterling)', description: 'Base payout fee for non-Sterling banks', prefix: '₦' },
+  WITHDRAWAL_FEE_STERLING: { label: 'Payout Fee (Sterling)', description: 'Payout fee for Sterling bank (0 = free)', prefix: '₦' },
+  WITHDRAWAL_FEE_VAT_PERCENT: { label: 'Payout Fee VAT', description: 'VAT applied to payout fees', suffix: '%' },
+  STAMP_DUTY_AMOUNT: { label: 'Stamp Duty', description: 'Stamp duty charged per qualifying payout', prefix: '₦' },
+  STAMP_DUTY_THRESHOLD: { label: 'Stamp Duty Threshold', description: 'Minimum payout amount that attracts stamp duty', prefix: '₦' },
+  STERLING_BANK_CODE: { label: 'Sterling Bank Code', description: 'Bank code used to identify Sterling Bank for free payout' },
 };
 
 function TabBtn({ active, onClick, icon: Icon, label }: { active: boolean; onClick: () => void; icon: React.ElementType; label: string }) {
@@ -61,14 +72,47 @@ function Feedback({ msg }: { msg: { type: 'ok' | 'err'; text: string } | null })
   return <p className={`text-sm ${msg.type === 'ok' ? 'text-[#12B76A]' : 'text-[#FF3B30]'}`}>{msg.text}</p>;
 }
 
+function SettingField({
+  settingKey, meta, settings, setSettings, canWrite,
+}: {
+  settingKey: string;
+  meta: { label: string; description: string; prefix?: string; suffix?: string };
+  settings: Record<string, string>;
+  setSettings: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  canWrite: boolean;
+}) {
+  const isText = settingKey === 'STERLING_BANK_CODE';
+  return (
+    <div className="space-y-1">
+      <Label>{meta.label}</Label>
+      <p className="text-xs text-[#717784]">{meta.description}</p>
+      <div className="relative mt-1">
+        {meta.prefix && (
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#717784]">{meta.prefix}</span>
+        )}
+        <Input
+          type={isText ? 'text' : 'number'}
+          value={settings[settingKey] ?? ''}
+          onChange={(e) => setSettings((s) => ({ ...s, [settingKey]: e.target.value }))}
+          disabled={!canWrite}
+          className={`${meta.prefix ? 'pl-7' : ''} ${meta.suffix ? 'pr-14' : ''}`}
+        />
+        {meta.suffix && (
+          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[#717784]">{meta.suffix}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   const { admin, isSuperAdmin, hasPermission, refreshAdmin } = useAuth();
 
   const tabs: { key: Tab; label: string; icon: React.ElementType; show: boolean }[] = [
     { key: 'profile',     label: 'Profile',     icon: User,             show: true },
     { key: 'security',    label: 'Security',    icon: Shield,           show: true },
-    { key: 'financial',   label: 'Financial',   icon: SlidersHorizontal, show: isSuperAdmin || hasPermission('SETTINGS_READ') },
-    { key: 'maintenance', label: 'Maintenance', icon: Wrench,           show: isSuperAdmin || hasPermission('MAINTENANCE_RUN') },
+    { key: 'financial',   label: 'Financial',   icon: SlidersHorizontal, show: isSuperAdmin || hasPermission('FINANCIAL_SETTINGS_READ') },
+    { key: 'maintenance', label: 'Maintenance', icon: Wrench,           show: isSuperAdmin || hasPermission('MAINTENANCE_SETTINGS_READ') || hasPermission('MAINTENANCE_RUN') },
   ];
 
   const [tab, setTab] = useState<Tab>('profile');
@@ -99,7 +143,7 @@ export default function SettingsPage() {
   }, [admin]);
 
   useEffect(() => {
-    if (tab === 'financial' && (hasPermission('SETTINGS_READ') || isSuperAdmin)) {
+    if (tab === 'financial' && (hasPermission('FINANCIAL_SETTINGS_READ') || isSuperAdmin)) {
       setSettingsLoading(true);
       adminSettings.get()
         .then((data) => {
@@ -109,7 +153,7 @@ export default function SettingsPage() {
         })
         .finally(() => setSettingsLoading(false));
     }
-    if (tab === 'maintenance' && (hasPermission('MAINTENANCE_RUN') || isSuperAdmin)) {
+    if (tab === 'maintenance' && (hasPermission('MAINTENANCE_SETTINGS_READ') || hasPermission('MAINTENANCE_RUN') || isSuperAdmin)) {
       adminMaintenance.jobs().then(setJobs);
     }
   }, [tab, isSuperAdmin, hasPermission]);
@@ -259,7 +303,7 @@ export default function SettingsPage() {
             </Section>
           )}
 
-          {tab === 'financial' && (hasPermission('SETTINGS_READ') || isSuperAdmin) && (
+          {tab === 'financial' && (hasPermission('FINANCIAL_SETTINGS_READ') || isSuperAdmin) && (
             <>
               <Section title="Financial Thresholds">
                 {settingsLoading ? (
@@ -268,26 +312,22 @@ export default function SettingsPage() {
                   </div>
                 ) : (
                   <div className="space-y-5">
-                    {Object.entries(SETTING_META).map(([key, meta]) => (
-                      <div key={key} className="space-y-1">
-                        <Label>{meta.label}</Label>
-                        <p className="text-xs text-[#717784]">{meta.description}</p>
-                        <div className="relative mt-1">
-                          {meta.prefix && (
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#717784]">{meta.prefix}</span>
-                          )}
-                          <Input
-                            type="number"
-                            value={settings[key] ?? ''}
-                            onChange={(e) => setSettings((s) => ({ ...s, [key]: e.target.value }))}
-                            disabled={!hasPermission('SETTINGS_WRITE') && !isSuperAdmin}
-                            className={`${meta.prefix ? 'pl-7' : ''} ${meta.suffix ? 'pr-14' : ''}`}
-                          />
-                          {meta.suffix && (
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-[#717784]">{meta.suffix}</span>
-                          )}
-                        </div>
-                      </div>
+                    {Object.entries(THRESHOLD_SETTING_META).map(([key, meta]) => (
+                      <SettingField key={key} settingKey={key} meta={meta} settings={settings} setSettings={setSettings} canWrite={hasPermission('FINANCIAL_SETTINGS_WRITE') || isSuperAdmin} />
+                    ))}
+                  </div>
+                )}
+              </Section>
+
+              <Section title="Payment Fees">
+                {settingsLoading ? (
+                  <div className="space-y-4">
+                    {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => <div key={i} className="h-10 bg-[#EDF0F7] rounded animate-pulse" />)}
+                  </div>
+                ) : (
+                  <div className="space-y-5">
+                    {Object.entries(FEE_SETTING_META).map(([key, meta]) => (
+                      <SettingField key={key} settingKey={key} meta={meta} settings={settings} setSettings={setSettings} canWrite={hasPermission('FINANCIAL_SETTINGS_WRITE') || isSuperAdmin} />
                     ))}
                   </div>
                 )}
@@ -295,7 +335,7 @@ export default function SettingsPage() {
 
               <Feedback msg={settingsMsg} />
 
-              {(hasPermission('SETTINGS_WRITE') || isSuperAdmin) && (
+              {(hasPermission('FINANCIAL_SETTINGS_WRITE') || isSuperAdmin) && (
                 <Button onClick={saveSettings} disabled={settingsSaving} className="bg-[#C5DB10] text-[#0E121B] font-semibold hover:bg-[#b0c40e]">
                   {settingsSaving ? 'Saving…' : 'Save Settings'}
                 </Button>
@@ -303,21 +343,23 @@ export default function SettingsPage() {
             </>
           )}
 
-          {tab === 'maintenance' && (hasPermission('MAINTENANCE_RUN') || isSuperAdmin) && (
+          {tab === 'maintenance' && (hasPermission('MAINTENANCE_SETTINGS_READ') || hasPermission('MAINTENANCE_RUN') || isSuperAdmin) && (
             <>
-              <Section title="Cache Management">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-[#0E121B]">Application Cache</p>
-                    <p className="text-xs text-[#717784] mt-0.5">Clears all in-memory cached data including stock prices and payment quotes.</p>
-                    <div className="mt-1"><LastRun result={cacheLastRun} /></div>
+              {(hasPermission('MAINTENANCE_RUN') || isSuperAdmin) && (
+                <Section title="Cache Management">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-[#0E121B]">Application Cache</p>
+                      <p className="text-xs text-[#717784] mt-0.5">Clears all in-memory cached data including stock prices and payment quotes.</p>
+                      <div className="mt-1"><LastRun result={cacheLastRun} /></div>
+                    </div>
+                    <Button size="sm" variant="outline" onClick={clearCache} disabled={clearingCache} className="gap-1.5 flex-shrink-0">
+                      <Trash2 size={14} />
+                      {clearingCache ? 'Clearing…' : 'Clear Cache'}
+                    </Button>
                   </div>
-                  <Button size="sm" variant="outline" onClick={clearCache} disabled={clearingCache} className="gap-1.5 flex-shrink-0">
-                    <Trash2 size={14} />
-                    {clearingCache ? 'Clearing…' : 'Clear Cache'}
-                  </Button>
-                </div>
-              </Section>
+                </Section>
+              )}
 
               <Section title="Scheduled Jobs">
                 <div className="divide-y divide-[#E1E4EA]">
@@ -328,10 +370,12 @@ export default function SettingsPage() {
                         <p className="text-xs text-[#717784] mt-0.5">{job.description}</p>
                         <div className="mt-1"><LastRun result={jobLastRun[job.name]} /></div>
                       </div>
-                      <Button size="sm" variant="outline" onClick={() => runJob(job.name)} disabled={runningJob === job.name} className="gap-1.5 flex-shrink-0 ml-4">
-                        <Play size={13} />
-                        {runningJob === job.name ? 'Running…' : 'Run Now'}
-                      </Button>
+                      {(hasPermission('MAINTENANCE_RUN') || isSuperAdmin) && (
+                        <Button size="sm" variant="outline" onClick={() => runJob(job.name)} disabled={runningJob === job.name} className="gap-1.5 flex-shrink-0 ml-4">
+                          <Play size={13} />
+                          {runningJob === job.name ? 'Running…' : 'Run Now'}
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>
