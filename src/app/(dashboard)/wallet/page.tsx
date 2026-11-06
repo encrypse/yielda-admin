@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { NoPermission } from '@/components/NoPermission';
+import { useRouter } from 'next/navigation';
 
 type LedgerEntry = {
   id: string; entryType: string; source: string; amount: string;
