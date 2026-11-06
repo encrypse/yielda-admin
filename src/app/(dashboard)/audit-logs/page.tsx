@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { adminAuditLogs } from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { NoPermission } from '@/components/NoPermission';
 
@@ -29,6 +29,8 @@ const ACTION_COLOR: Record<string, string> = {
   ADMIN_INVITED: 'text-[#3571F1]',
   ADMIN_PERMISSIONS_UPDATED: 'text-[#3571F1]',
   ADMIN_REPORT_EXPORTED: 'text-[#3571F1]',
+  ADMIN_AUDIT_LOG_EXPORTED: 'text-[#3571F1]',
+  ADMIN_ADMIN_ACTIVATED: 'text-[#12B76A]',
   ADMIN_USER_ACTIVATED: 'text-[#12B76A]',
   ADMIN_USER_EDITED: 'text-[#717784]',
   ADMIN_PROFILE_UPDATED: 'text-[#717784]',
@@ -40,17 +42,19 @@ const ACTION_COLOR: Record<string, string> = {
 const ALL_ACTIONS = [
   'ADMIN_LOGIN', 'ADMIN_LOGOUT', 'ADMIN_PROFILE_UPDATED', 'ADMIN_2FA_SETUP',
   'ADMIN_USER_ACTIVATED', 'ADMIN_USER_SUSPENDED', 'ADMIN_USER_BLOCKED', 'ADMIN_USER_EDITED', 'ADMIN_USER_DELETED',
-  'ADMIN_INVITED', 'ADMIN_PERMISSIONS_UPDATED', 'ADMIN_DEACTIVATED',
-  'ADMIN_SETTINGS_UPDATED', 'ADMIN_CACHE_CLEARED', 'ADMIN_JOB_TRIGGERED', 'ADMIN_REPORT_EXPORTED',
+  'ADMIN_INVITED', 'ADMIN_PERMISSIONS_UPDATED', 'ADMIN_DEACTIVATED', 'ADMIN_ADMIN_ACTIVATED',
+  'ADMIN_SETTINGS_UPDATED', 'ADMIN_CACHE_CLEARED', 'ADMIN_JOB_TRIGGERED',
+  'ADMIN_REPORT_EXPORTED', 'ADMIN_AUDIT_LOG_EXPORTED',
 ];
 
 export default function AuditLogsPage() {
-  const { isSuperAdmin, loading: authLoading } = useAuth();
+  const { isSuperAdmin, hasPermission, loading: authLoading } = useAuth();
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [action, setAction] = useState('');
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     setPage(1);
@@ -68,6 +72,23 @@ export default function AuditLogsPage() {
 
   const totalPages = Math.ceil(total / 50);
 
+  async function handleExport(format: 'csv' | 'pdf') {
+    setExporting(true);
+    try {
+      const params: Record<string, unknown> = { format };
+      if (action) params.action = action;
+      const res = await adminAuditLogs.export(params);
+      const url = URL.createObjectURL(new Blob([res.data as BlobPart]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `audit-logs.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } finally {
+      setExporting(false);
+    }
+  }
+
   if (!authLoading && !isSuperAdmin) return <NoPermission section="Audit Logs" />;
 
   return (
@@ -77,16 +98,28 @@ export default function AuditLogsPage() {
           <h2 className="text-xl font-semibold text-[#0E121B]">Audit Logs</h2>
           <p className="text-sm text-[#717784]">{total.toLocaleString()} total admin actions recorded</p>
         </div>
-        <select
-          value={action}
-          onChange={(e) => setAction(e.target.value)}
-          className="text-sm border border-[#E1E4EA] rounded-lg px-3 py-1.5 text-[#0E121B] focus:outline-none focus:ring-2 focus:ring-[#C5DB10] bg-white"
-        >
-          <option value="">All actions</option>
-          {ALL_ACTIONS.map((a) => (
-            <option key={a} value={a}>{a.replace(/^ADMIN_/, '').replace(/_/g, ' ')}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-2 flex-wrap">
+          <select
+            value={action}
+            onChange={(e) => setAction(e.target.value)}
+            className="text-sm border border-[#E1E4EA] rounded-lg px-3 py-1.5 text-[#0E121B] focus:outline-none focus:ring-2 focus:ring-[#C5DB10] bg-white"
+          >
+            <option value="">All actions</option>
+            {ALL_ACTIONS.map((a) => (
+              <option key={a} value={a}>{a.replace(/^ADMIN_/, '').replace(/_/g, ' ')}</option>
+            ))}
+          </select>
+          {(isSuperAdmin || hasPermission('REPORTS_EXPORT')) && (
+            <div className="flex gap-1">
+              <Button variant="outline" size="sm" onClick={() => handleExport('csv')} disabled={exporting} className="gap-1.5">
+                <Download size={14} /> CSV
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleExport('pdf')} disabled={exporting} className="gap-1.5">
+                <Download size={14} /> PDF
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border border-[#E1E4EA] overflow-hidden">
