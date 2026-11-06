@@ -21,8 +21,16 @@ type TransactionFull = {
   receiverBank: string | null;
   receiverBankAccountNumber: string | null;
   receiverAccountName: string | null;
+  metadata: Record<string, unknown> | null;
   createdAt: string;
   user: { id: string; firstName: string; lastName: string; email: string } | null;
+};
+
+type WithdrawalMeta = {
+  withdrawalAmount?: number;
+  payoutFee?: number;
+  stampDuty?: number;
+  totalFees?: number;
 };
 
 const TX_COLOR: Record<string, string> = {
@@ -31,9 +39,21 @@ const TX_COLOR: Record<string, string> = {
   REVERSED: 'bg-[#EFF6FF] text-[#3571F1] border-[#3571F1]/20',
 };
 
+function deriveCategory(tx: TransactionFull): string {
+  if (tx.transactionType === 'REVERSED') return 'Reversal';
+  if (tx.transactionType === 'DEBIT' && tx.source === 'USER_ACTION') {
+    const meta = tx.metadata as WithdrawalMeta | null;
+    if (meta?.withdrawalAmount !== undefined) return 'Withdrawal';
+    return 'Debit';
+  }
+  return tx.transactionType;
+}
+
+function isWithdrawalMeta(meta: Record<string, unknown> | null): meta is WithdrawalMeta {
+  return meta != null && 'withdrawalAmount' in meta;
+}
+
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
-  if (value === null || value === undefined || value === '') return null;
-  return (
     <div className="py-3 flex items-start justify-between gap-4 border-b border-[#E1E4EA] last:border-0">
       <span className="text-sm text-[#717784] flex-shrink-0">{label}</span>
       <span className="text-sm font-medium text-[#0E121B] text-right break-all max-w-[65%]">{value}</span>
@@ -58,6 +78,7 @@ export function TransactionDrawer({ id, onClose }: { id: string; onClose: () => 
 
   const hasSender = tx && (tx.senderBank || tx.senderAccountName || tx.senderBankAccountNumber);
   const hasReceiver = tx && (tx.receiverBank || tx.receiverAccountName || tx.receiverBankAccountNumber);
+  const withdrawalMeta = tx && isWithdrawalMeta(tx.metadata) ? tx.metadata : null;
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -105,11 +126,40 @@ export function TransactionDrawer({ id, onClose }: { id: string; onClose: () => 
                 {tx.user && (
                   <Row label="User" value={`${tx.user.firstName} ${tx.user.lastName} (${tx.user.email})`} />
                 )}
+                <Row label="Category" value={deriveCategory(tx)} />
                 <Row label="Balance Type" value={tx.balanceType} />
-                <Row label="Source" value={tx.source} />
                 <Row label="Reason" value={tx.reason ?? '—'} />
                 <Row label="Date" value={formatDate(tx.createdAt)} />
               </div>
+
+              {/* Fee breakdown — withdrawals only */}
+              {withdrawalMeta && (
+                <div>
+                  <p className="text-xs font-semibold text-[#717784] uppercase tracking-wide mb-2">Fee Breakdown</p>
+                  <div className="bg-[#F5F7FA] rounded-lg px-4 divide-y divide-[#E1E4EA]">
+                    <div className="py-2.5 flex justify-between gap-4">
+                      <span className="text-xs text-[#717784]">Withdrawal Amount</span>
+                      <span className="text-xs font-medium text-[#0E121B]">{formatMoney(String(withdrawalMeta.withdrawalAmount))}</span>
+                    </div>
+                    {withdrawalMeta.payoutFee !== undefined && (
+                      <div className="py-2.5 flex justify-between gap-4">
+                        <span className="text-xs text-[#717784]">Payout Fee</span>
+                        <span className="text-xs font-medium text-[#0E121B]">{formatMoney(String(withdrawalMeta.payoutFee))}</span>
+                      </div>
+                    )}
+                    {withdrawalMeta.stampDuty !== undefined && (
+                      <div className="py-2.5 flex justify-between gap-4">
+                        <span className="text-xs text-[#717784]">Stamp Duty</span>
+                        <span className="text-xs font-medium text-[#0E121B]">{formatMoney(String(withdrawalMeta.stampDuty))}</span>
+                      </div>
+                    )}
+                    <div className="py-2.5 flex justify-between gap-4">
+                      <span className="text-xs font-semibold text-[#0E121B]">Total Debited</span>
+                      <span className="text-xs font-semibold text-[#FF3B30]">{formatMoney(tx.amount)}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* References */}
               <div>
