@@ -1,6 +1,6 @@
 'use client';
 import { useRouter } from 'next/navigation';
-import { LogOut } from 'lucide-react';
+import { LogOut, Menu } from 'lucide-react';
 import { adminAuth } from '@/lib/api';
 import { clearToken } from '@/lib/auth';
 import type { AdminUser } from '@/hooks/useAuth';
@@ -9,9 +9,9 @@ import {
   DropdownMenuSeparator, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-type Props = { admin: AdminUser | null; title?: string };
+type Props = { admin: AdminUser | null; title?: string; onMenuOpen?: () => void };
 
-export function Header({ admin, title }: Props) {
+export function Header({ admin, title, onMenuOpen }: Props) {
   const router = useRouter();
 
   async function handleLogout() {
@@ -23,8 +23,16 @@ export function Header({ admin, title }: Props) {
   const initials = admin ? `${admin.firstName[0]}${admin.lastName[0]}`.toUpperCase() : '??';
 
   return (
-    <header className="h-14 bg-white border-b border-[#E1E4EA] flex items-center justify-between px-6 flex-shrink-0">
-      <h1 className="text-base font-semibold text-[#0E121B]">{title}</h1>
+    <header className="h-14 bg-white border-b border-[#E1E4EA] flex items-center justify-between px-4 md:px-6 flex-shrink-0">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={onMenuOpen}
+          className="md:hidden w-8 h-8 flex items-center justify-center rounded-lg text-[#717784] hover:text-[#0E121B] hover:bg-[#F5F7FA] transition-colors"
+        >
+          <Menu size={18} />
+        </button>
+        <h1 className="text-base font-semibold text-[#0E121B]">{title}</h1>
+      </div>
       <DropdownMenu>
         <DropdownMenuTrigger className="flex items-center gap-2 rounded-full focus:outline-none focus:ring-2 focus:ring-[#C5DB10] cursor-pointer">
           <div className="w-8 h-8 rounded-full bg-[#C5DB10] flex items-center justify-center text-xs font-semibold text-[#0E121B]">

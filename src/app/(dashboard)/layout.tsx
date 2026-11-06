@@ -1,4 +1,5 @@
 'use client';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/hooks/useAuth';
 import { useSessionExpiry } from '@/hooks/useSessionExpiry';
@@ -9,6 +10,7 @@ import { SessionExpiryModal } from '@/components/layout/SessionExpiryModal';
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { admin, loading, permissions, isSuperAdmin } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   function handleLogout() {
     router.push('/login');
@@ -26,12 +28,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex min-h-screen">
-      <div className="sticky top-0 h-screen flex-shrink-0">
-        <Sidebar permissions={permissions} isSuperAdmin={isSuperAdmin} authLoading={loading} />
-      </div>
+      <Sidebar
+        permissions={permissions}
+        isSuperAdmin={isSuperAdmin}
+        authLoading={loading}
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
       <div className="flex-1 flex flex-col min-w-0">
-        <Header admin={admin} />
-        <main className="flex-1 p-6">
+        <Header admin={admin} onMenuOpen={() => setSidebarOpen(true)} />
+        <main className="flex-1 p-4 md:p-6">
           {children}
         </main>
       </div>
