@@ -70,6 +70,7 @@ export const adminSettlements = {
 
 export const adminTransactions = {
   list: (params?: object) => api.get('/admin/transactions', { params }).then((r) => r.data.data),
+  get: (id: string) => api.get(`/admin/transactions/${id}`).then((r) => r.data.data),
 };
 
 export const adminMetrics = {

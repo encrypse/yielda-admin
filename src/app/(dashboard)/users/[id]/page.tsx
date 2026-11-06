@@ -7,6 +7,7 @@ import { formatDate, formatMoney, downloadBlob } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ExportModal } from '@/components/ExportModal';
+import { TransactionDrawer } from '@/components/TransactionDrawer';
 import { ChevronLeft, Download, Pencil, RefreshCw, User, ShieldCheck, ClipboardList, TrendingUp, X, ZoomIn } from 'lucide-react';
 
 type KycProfile = {
@@ -240,6 +241,7 @@ export default function UserDetailPage() {
 
   const [imageModal, setImageModal] = useState<{ src: string; label: string } | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const [selectedTxId, setSelectedTxId] = useState<string | null>(null);
 
   const [confirmModal, setConfirmModal] = useState<{ targetStatus: 'ACTIVE' | 'SUSPENDED' } | null>(null);
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -378,6 +380,7 @@ export default function UserDetailPage() {
       {imageModal && (
         <ImageModal src={imageModal.src} label={imageModal.label} onClose={() => setImageModal(null)} />
       )}
+      {selectedTxId && <TransactionDrawer id={selectedTxId} onClose={() => setSelectedTxId(null)} />}
 
       {/* Naya account creation data sheet */}
       {nayaSheet && (
@@ -685,7 +688,7 @@ export default function UserDetailPage() {
               </thead>
               <tbody>
                 {(user.recentTransactions ?? []).map((tx) => (
-                  <tr key={tx.id} className="border-b border-[#E1E4EA] last:border-0 hover:bg-[#F5F7FA]">
+                  <tr key={tx.id} className="border-b border-[#E1E4EA] last:border-0 hover:bg-[#F5F7FA] cursor-pointer" onClick={() => setSelectedTxId(tx.id)}>
                     <td className="px-5 py-3 text-[#717784] text-xs">{formatDate(tx.createdAt)}</td>
                     <td className="px-5 py-3">
                       <Badge className={`text-xs border ${TX_COLOR[tx.transactionType] ?? 'bg-[#EDF0F7] text-[#717784] border-[#E1E4EA]'}`}>
