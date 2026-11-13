@@ -5,10 +5,83 @@ import { formatDate, formatMoney } from '@/lib/utils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { NoPermission } from '@/components/NoPermission';
 import { useRouter } from 'next/navigation';
+
+const ENTRY_COLOR: Record<string, string> = {
+  CREDIT: 'bg-[#F6FFF9] text-[#12B76A] border-[#12B76A]/20',
+  DEBIT: 'bg-[#FFF6F6] text-[#FF3B30] border-[#FF3B30]/20',
+};
+
+function LedgerDrawer({ entry, onClose }: { entry: LedgerEntry; onClose: () => void }) {
+  const router = useRouter();
+  return (
+    <div className="fixed inset-0 z-50 flex">
+      <div className="flex-1 bg-black/40" onClick={onClose} />
+      <div className="w-full max-w-md bg-white h-full flex flex-col shadow-2xl">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E1E4EA]">
+          <div className="flex items-center gap-3">
+            <h3 className="text-base font-semibold text-[#0E121B]">Ledger Entry</h3>
+            <Badge className={`text-xs border ${ENTRY_COLOR[entry.entryType] ?? 'bg-[#EDF0F7] text-[#717784] border-[#E1E4EA]'}`}>
+              {entry.entryType}
+            </Badge>
+          </div>
+          <button onClick={onClose} className="text-[#717784] hover:text-[#0E121B] transition-colors">
+            <X size={18} />
+          </button>
+        </div>
+        <div className="flex-1 overflow-y-auto px-6 py-5 space-y-5">
+          <div className="bg-[#F5F7FA] rounded-xl px-5 py-4 text-center">
+            <p className="text-xs text-[#717784] mb-1">Amount</p>
+            <p className={`text-2xl font-bold ${entry.entryType === 'CREDIT' ? 'text-[#12B76A]' : 'text-[#FF3B30]'}`}>
+              {entry.entryType === 'CREDIT' ? '+' : '-'}{formatMoney(entry.amount)}
+            </p>
+          </div>
+          <div className="divide-y divide-[#E1E4EA]">
+            {[
+              { label: 'Source', value: entry.source },
+              { label: 'Provider Status', value: entry.providerStatus ?? '—' },
+              { label: 'Reason', value: entry.reason ?? '—' },
+              { label: 'Date', value: formatDate(entry.createdAt) },
+            ].map(({ label, value }) => (
+              <div key={label} className="py-3 flex items-start justify-between gap-4">
+                <span className="text-sm text-[#717784]">{label}</span>
+                <span className="text-sm font-medium text-[#0E121B] text-right break-all max-w-[65%]">{value}</span>
+              </div>
+            ))}
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-[#717784] uppercase tracking-wide mb-2">References</p>
+            <div className="bg-[#F5F7FA] rounded-lg px-4 divide-y divide-[#E1E4EA]">
+              <div className="py-3">
+                <p className="text-xs text-[#717784] mb-0.5">Reference</p>
+                <p className="text-xs font-mono text-[#0E121B] break-all">{entry.reference}</p>
+              </div>
+              {entry.providerReference && (
+                <div className="py-3">
+                  <p className="text-xs text-[#717784] mb-0.5">Provider Reference</p>
+                  <p className="text-xs font-mono text-[#0E121B] break-all">{entry.providerReference}</p>
+                </div>
+              )}
+            </div>
+          </div>
+          {entry.userId && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full text-xs"
+              onClick={() => { onClose(); router.push(`/users/${entry.userId}`); }}
+            >
+              View User Profile
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 type LedgerEntry = {
   id: string; entryType: string; source: string; amount: string;
@@ -28,11 +101,11 @@ type WalletData = {
 };
 
 export default function WalletPage() {
-  const router = useRouter();
   const { hasPermission, loading: authLoading } = useAuth();
   const [data, setData] = useState<WalletData | null>(null);
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [selectedEntry, setSelectedEntry] = useState<LedgerEntry | null>(null);
 
   useEffect(() => {
     if (authLoading || !hasPermission('WALLET_READ')) return;
@@ -48,6 +121,7 @@ export default function WalletPage() {
 
   return (
     <div className="space-y-6">
+      {selectedEntry && <LedgerDrawer entry={selectedEntry} onClose={() => setSelectedEntry(null)} />}
       <h2 className="text-xl font-semibold text-[#0E121B]">Settlement Wallet</h2>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -89,8 +163,8 @@ export default function WalletPage() {
               {ledger?.data.map((e) => (
                 <tr
                   key={e.id}
-                  className={`border-b border-[#E1E4EA] last:border-0 hover:bg-[#F5F7FA] ${e.userId ? 'cursor-pointer' : ''}`}
-                  onClick={() => { if (e.userId) router.push(`/users/${e.userId}`); }}
+                  className="border-b border-[#E1E4EA] last:border-0 hover:bg-[#F5F7FA] cursor-pointer"
+                  onClick={() => setSelectedEntry(e)}
                 >
                   <td className="px-4 py-2.5">
                     <Badge className={`text-xs border ${e.entryType === 'CREDIT' ? 'bg-[#F6FFF9] text-[#12B76A] border-[#12B76A]/20' : 'bg-[#FFF6F6] text-[#FF3B30] border-[#FF3B30]/20'}`}>{e.entryType}</Badge>

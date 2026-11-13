@@ -26,6 +26,8 @@ export default function AdminsPage() {
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [selectedPerms, setSelectedPerms] = useState<string[]>([]);
+  const [inviteAsSuperAdmin, setInviteAsSuperAdmin] = useState(false);
+  const [inviteConfirmPassword, setInviteConfirmPassword] = useState('');
   const [inviting, setInviting] = useState(false);
   const [inviteError, setInviteError] = useState('');
   const [inviteLink, setInviteLink] = useState('');
@@ -55,12 +57,14 @@ export default function AdminsPage() {
     setInviteError('');
     setInviting(true);
     try {
-      const data = await adminAdmins.invite(inviteEmail, selectedPerms);
+      const data = await adminAdmins.invite(inviteEmail, selectedPerms, inviteAsSuperAdmin, inviteAsSuperAdmin ? inviteConfirmPassword : undefined);
       const link = `${window.location.origin}/accept-invite?token=${data.inviteToken}`;
       setInvitedEmail(inviteEmail);
       setInviteLink(link);
       setInviteEmail('');
       setSelectedPerms([]);
+      setInviteAsSuperAdmin(false);
+      setInviteConfirmPassword('');
       await load();
     } catch (err: unknown) {
       const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -81,6 +85,8 @@ export default function AdminsPage() {
     setInviteLink('');
     setInvitedEmail('');
     setInviteError('');
+    setInviteAsSuperAdmin(false);
+    setInviteConfirmPassword('');
   }
 
   async function toggleActive(admin: AdminUser) {
@@ -263,6 +269,29 @@ export default function AdminsPage() {
                   ))}
                 </div>
               </div>
+              <label className="flex items-center gap-3 cursor-pointer select-none pt-1">
+                <div
+                  onClick={() => { setInviteAsSuperAdmin((v) => !v); setInviteConfirmPassword(''); }}
+                  className={`relative inline-flex h-5 w-9 flex-shrink-0 rounded-full transition-colors ${inviteAsSuperAdmin ? 'bg-[#C5DB10]' : 'bg-[#D0D5DD]'}`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform mt-0.5 ${inviteAsSuperAdmin ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </div>
+                <span className="text-sm font-medium text-[#0E121B]">Super Admin</span>
+                <span className="text-xs text-[#717784]">(full access, can manage other admins)</span>
+              </label>
+              {inviteAsSuperAdmin && (
+                <div className="space-y-1.5">
+                  <Label>Your password <span className="text-[#FF3B30]">*</span></Label>
+                  <Input
+                    type="password"
+                    placeholder="Confirm your password to proceed"
+                    value={inviteConfirmPassword}
+                    onChange={(e) => setInviteConfirmPassword(e.target.value)}
+                    required={inviteAsSuperAdmin}
+                    autoComplete="current-password"
+                  />
+                </div>
+              )}
               {inviteError && <p className="text-sm text-[#FF3B30]">{inviteError}</p>}
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={closeDialog}>Cancel</Button>
