@@ -29,7 +29,6 @@ const THRESHOLD_SETTING_META: Record<string, { label: string; description: strin
   MAX_INVESTMENT_AMOUNT: { label: 'Maximum Investment', description: 'Largest allowed investment in NGN', prefix: '₦' },
   MIN_WITHDRAWAL_AMOUNT: { label: 'Minimum Withdrawal', description: 'Smallest withdrawal allowed in NGN', prefix: '₦' },
   MAX_WITHDRAWAL_AMOUNT: { label: 'Maximum Withdrawal', description: 'Largest withdrawal allowed in NGN', prefix: '₦' },
-  TRANSACTION_FEE_PERCENT: { label: 'Transaction Fee', description: 'Fee charged on each transaction', suffix: '%' },
   SETTLEMENT_CYCLE_DAYS: { label: 'Settlement Cycle', description: 'Number of days for settlement cycle', suffix: 'days' },
 };
 

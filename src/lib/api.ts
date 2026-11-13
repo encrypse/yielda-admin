@@ -88,8 +88,8 @@ export const adminWallet = {
 
 export const adminAdmins = {
   list: () => api.get('/admin/admins').then((r) => r.data.data),
-  invite: (email: string, permissions: string[]) =>
-    api.post('/admin/admins/invite', { email, permissions }).then((r) => r.data.data),
+  invite: (email: string, permissions: string[], isSuperAdmin?: boolean, confirmPassword?: string) =>
+    api.post('/admin/admins/invite', { email, permissions, ...(isSuperAdmin ? { isSuperAdmin: true, confirmPassword } : {}) }).then((r) => r.data.data),
   update: (id: string, data: object) =>
     api.patch(`/admin/admins/${id}`, data).then((r) => r.data.data),
   permissions: () => api.get('/admin/admins/permissions').then((r) => r.data.data),
